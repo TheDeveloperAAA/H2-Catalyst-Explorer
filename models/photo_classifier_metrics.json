@@ -1,0 +1,74 @@
+{
+  "tier_thresholds_umol_h_g": [
+    160.0,
+    801.0,
+    4108.5
+  ],
+  "tier_names": [
+    "low",
+    "moderate",
+    "high",
+    "exceptional"
+  ],
+  "n_rows": 7287,
+  "tier_model": {
+    "accuracy": 0.399,
+    "macro_f1": 0.397,
+    "random_baseline": 0.25
+  },
+  "binary_model": {
+    "accuracy": 0.647,
+    "f1": 0.632,
+    "roc_auc": 0.721,
+    "random_baseline": 0.5,
+    "threshold_umol_h_g": 801.0,
+    "condition_feature_importance": [
+      {
+        "feature": "wavelength (nm)",
+        "importance": 0.0076
+      },
+      {
+        "feature": "band gap (eV)",
+        "importance": 0.0074
+      },
+      {
+        "feature": "light power (W)",
+        "importance": 0.0071
+      },
+      {
+        "feature": "irradiation time (h)",
+        "importance": 0.0069
+      },
+      {
+        "feature": "scavenger strength",
+        "importance": 0.006
+      }
+    ],
+    "composition_feature_importance": [
+      {
+        "feature": "MagpieData minimum NUnfilled",
+        "importance": 0.0306
+      },
+      {
+        "feature": "MagpieData range NdUnfilled",
+        "importance": 0.0295
+      },
+      {
+        "feature": "MagpieData maximum NdUnfilled",
+        "importance": 0.0217
+      },
+      {
+        "feature": "MagpieData mean NpUnfilled",
+        "importance": 0.0136
+      },
+      {
+        "feature": "MagpieData mode Row",
+        "importance": 0.0135
+      },
+      {
+        "feature": "MagpieData minimum NfValence",
+        "importance": 0.013
+      }
+    ]
+  }
+}

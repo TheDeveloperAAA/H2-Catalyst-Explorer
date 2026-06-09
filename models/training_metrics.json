@@ -1,0 +1,97 @@
+{
+  "electrocatalysis": {
+    "target": "H* reaction energy (eV)",
+    "n_rows": 4147,
+    "R2": 0.899,
+    "MAE_eV": 0.15,
+    "RMSE_eV": 0.222,
+    "validation": "GroupShuffleSplit by surface composition (unseen-material test)",
+    "top_features": [
+      {
+        "feature": "MagpieData mode Column",
+        "importance": 0.179
+      },
+      {
+        "feature": "MagpieData mode MendeleevNumber",
+        "importance": 0.125
+      },
+      {
+        "feature": "MagpieData mean NdUnfilled",
+        "importance": 0.063
+      },
+      {
+        "feature": "MagpieData mean Column",
+        "importance": 0.0599
+      },
+      {
+        "feature": "MagpieData mode NUnfilled",
+        "importance": 0.0399
+      },
+      {
+        "feature": "MagpieData mode NdUnfilled",
+        "importance": 0.027
+      },
+      {
+        "feature": "MagpieData mean MeltingT",
+        "importance": 0.0218
+      },
+      {
+        "feature": "MagpieData range NdValence",
+        "importance": 0.0152
+      }
+    ]
+  },
+  "photocatalysis": {
+    "target": "log10(H2 rate, umol/h/g)",
+    "n_rows": 7287,
+    "R2_log": 0.139,
+    "MAE_log": 0.8,
+    "typical_fold_error": 6.3,
+    "bandgap_coverage_pct": 38.6,
+    "validation": "GroupShuffleSplit by material (unseen-catalyst test)",
+    "top_condition_features": [
+      {
+        "feature": "band gap (eV)",
+        "importance": 0.0056
+      },
+      {
+        "feature": "wavelength (nm)",
+        "importance": 0.0047
+      },
+      {
+        "feature": "irradiation time (h)",
+        "importance": 0.0047
+      },
+      {
+        "feature": "light power (W)",
+        "importance": 0.0047
+      },
+      {
+        "feature": "scavenger strength",
+        "importance": 0.0039
+      }
+    ],
+    "top_composition_features": [
+      {
+        "feature": "MagpieData mode Row",
+        "importance": 0.1289
+      },
+      {
+        "feature": "MagpieData minimum Row",
+        "importance": 0.1037
+      },
+      {
+        "feature": "MagpieData minimum NUnfilled",
+        "importance": 0.0336
+      },
+      {
+        "feature": "MagpieData maximum NsUnfilled",
+        "importance": 0.0213
+      },
+      {
+        "feature": "MagpieData range NdUnfilled",
+        "importance": 0.0144
+      }
+    ]
+  }
+}
