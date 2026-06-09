@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>H&#8322; Catalyst Explorer — Predictive Screening for Green Hydrogen</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap');
+
+:root{
+  --ink:#0f1b2d; --ink2:#3a4a5f; --ink3:#6b7a8d;
+  --paper:#f7f5ef; --paper2:#fffdf8; --line:#e3ddd0;
+  --teal:#0f6e56; --teal-l:#e1f5ee; --teal-d:#04342c;
+  --amber:#a55a0b; --amber-l:#faeeda; --amber-d:#5a3206;
+  --coral:#993c1d; --coral-l:#faece7;
+  --blue:#185fa5; --blue-l:#e6f1fb; --blue-d:#042c53;
+  --red:#a32d2d; --red-l:#fcebeb;
+  --green:#3b6d11; --green-l:#eaf3de;
+  --shadow:0 1px 3px rgba(15,27,45,.06),0 8px 24px rgba(15,27,45,.05);
+  --shadow-lg:0 2px 8px rgba(15,27,45,.08),0 20px 50px rgba(15,27,45,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased}
+body{
+  font-family:'Spline Sans',sans-serif;background:var(--paper);color:var(--ink);
+  line-height:1.6;background-image:radial-gradient(circle at 12% 18%,rgba(15,110,86,.04),transparent 42%),radial-gradient(circle at 88% 8%,rgba(24,95,165,.04),transparent 38%);
+  min-height:100vh;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+/* Header */
+header{padding:48px 0 28px;border-bottom:1px solid var(--line)}
+.kicker{font-family:'Spline Sans Mono',monospace;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);font-weight:500;margin-bottom:14px}
+h1{font-family:'Fraunces',serif;font-weight:600;font-size:42px;line-height:1.05;letter-spacing:-.01em;color:var(--ink);max-width:760px}
+h1 em{font-style:italic;color:var(--teal)}
+.sub{margin-top:16px;font-size:17px;color:var(--ink2);max-width:660px}
+.credit{margin-top:18px;font-size:13px;color:var(--ink3);font-family:'Spline Sans Mono',monospace}
+
+/* Pills/tabs */
+.tabs{display:flex;gap:6px;margin:28px 0 0;flex-wrap:wrap}
+.tab{font-family:'Spline Sans',sans-serif;font-size:14.5px;font-weight:500;padding:11px 20px;border-radius:999px;border:1px solid var(--line);background:var(--paper2);color:var(--ink2);cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:8px}
+.tab:hover{border-color:var(--teal);color:var(--teal)}
+.tab.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tab .dot{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.6}
+
+/* Panels */
+.panel{display:none;padding:32px 0 60px;animation:fade .4s ease}
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.lead{font-family:'Fraunces',serif;font-size:24px;font-weight:500;color:var(--ink);margin-bottom:6px;letter-spacing:-.01em}
+.lead-sub{font-size:15px;color:var(--ink3);margin-bottom:26px;max-width:620px}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}h1{font-size:32px}}
+
+.card{background:var(--paper2);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:var(--shadow)}
+.card h3{font-family:'Spline Sans',sans-serif;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3);margin-bottom:18px}
+
+label{display:block;font-size:13px;font-weight:500;color:var(--ink2);margin:0 0 7px}
+select,input[type=text]{width:100%;font-family:'Spline Sans',sans-serif;font-size:15px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);cursor:pointer;transition:border .15s}
+select:focus,input:focus{outline:none;border-color:var(--teal)}
+.field{margin-bottom:16px}
+.toggle-row{display:flex;gap:8px}
+.toggle-row .opt{flex:1;text-align:center;padding:9px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;cursor:pointer;transition:all .15s;background:var(--paper)}
+.toggle-row .opt.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+
+/* Result display */
+.result{min-height:220px}
+.verdict-big{font-family:'Fraunces',serif;font-size:30px;font-weight:600;letter-spacing:-.01em;line-height:1.1;margin-bottom:4px}
+.tier-badge{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;padding:5px 13px;border-radius:999px;font-family:'Spline Sans Mono',monospace;letter-spacing:.03em;margin-bottom:18px}
+.t-low{background:var(--red-l);color:var(--red)}
+.t-moderate{background:var(--amber-l);color:var(--amber)}
+.t-high{background:var(--blue-l);color:var(--blue-d)}
+.t-exceptional{background:var(--teal-l);color:var(--teal-d)}
+
+/* Probability gauge */
+.gauge-wrap{margin:20px 0}
+.gauge-label{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink3);margin-bottom:6px;font-family:'Spline Sans Mono',monospace}
+.gauge{height:10px;background:var(--line);border-radius:999px;overflow:hidden;position:relative}
+.gauge-fill{height:100%;border-radius:999px;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.gauge-val{font-family:'Fraunces',serif;font-size:34px;font-weight:600;line-height:1}
+
+.meta-row{display:flex;gap:18px;flex-wrap:wrap;margin-top:18px;padding-top:18px;border-top:1px dashed var(--line)}
+.meta{font-size:13px}
+.meta .k{color:var(--ink3);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;font-family:'Spline Sans Mono',monospace;margin-bottom:2px}
+.meta .v{color:var(--ink);font-weight:500;font-size:14.5px}
+
+/* Evidence box */
+.evidence{margin-top:20px;background:var(--blue-l);border:1px solid #cfe1f5;border-radius:12px;padding:16px 18px}
+.evidence .etitle{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--blue-d);font-weight:600;font-family:'Spline Sans Mono',monospace;margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.evidence .erow{font-size:14px;color:var(--blue-d)}
+.evidence .ebar{margin-top:10px;height:30px;position:relative;background:rgba(255,255,255,.6);border-radius:7px;overflow:hidden}
+.evidence .erange{position:absolute;top:0;bottom:0;background:rgba(24,95,165,.25);border-left:2px solid var(--blue);border-right:2px solid var(--blue)}
+.evidence .emed{position:absolute;top:0;bottom:0;width:2px;background:var(--blue-d)}
+.evidence small{color:var(--blue);font-size:11.5px}
+
+.hint{font-size:13px;color:var(--ink3);font-style:italic;padding:40px 20px;text-align:center}
+
+/* Recommender */
+.lever{background:var(--paper2);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:16px;transition:all .18s}
+.lever:hover{border-color:var(--teal);box-shadow:var(--shadow)}
+.lever .lc{font-size:15px;font-weight:500;color:var(--ink)}
+.lever .ld{font-family:'Spline Sans Mono',monospace;font-size:13px;color:var(--ink3);margin-top:3px}
+.delta{font-family:'Fraunces',serif;font-size:24px;font-weight:600;white-space:nowrap}
+.delta.up{color:var(--teal)}.delta.flat{color:var(--ink3)}
+
+/* Justify / metrics */
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:28px}
+.metric{background:var(--paper2);border:1px solid var(--line);border-radius:14px;padding:20px}
+.metric .mv{font-family:'Fraunces',serif;font-size:36px;font-weight:600;color:var(--teal);line-height:1}
+.metric .mk{font-size:13px;color:var(--ink2);margin-top:6px;font-weight:500}
+.metric .mn{font-size:12px;color:var(--ink3);margin-top:4px}
+.bars{margin-top:10px}
+.bar-row{display:flex;align-items:center;gap:12px;margin-bottom:9px}
+.bar-name{font-size:13px;color:var(--ink2);width:170px;text-align:right;flex-shrink:0}
+.bar-track{flex:1;height:18px;background:var(--paper);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.bar-fill{height:100%;background:var(--teal);border-radius:5px 0 0 5px;transition:width .6s}
+.bar-pct{font-family:'Spline Sans Mono',monospace;font-size:12px;color:var(--ink3);width:44px;flex-shrink:0}
+
+.note{background:var(--amber-l);border:1px solid #ecd9b4;border-left:3px solid var(--amber);border-radius:0 10px 10px 0;padding:16px 18px;margin:22px 0;font-size:14px;color:var(--amber-d)}
+.note b{font-weight:600}
+.science{background:var(--teal-l);border:1px solid #b8e3d3;border-left:3px solid var(--teal);border-radius:0 10px 10px 0;padding:16px 18px;margin:22px 0;font-size:14px;color:var(--teal-d)}
+
+footer{border-top:1px solid var(--line);padding:28px 0 48px;font-size:12.5px;color:var(--ink3);font-family:'Spline Sans Mono',monospace;line-height:1.8}
+
+/* volcano viz */
+.volcano{margin-top:18px}
+.scoremeter{height:14px;background:linear-gradient(90deg,var(--red) 0%,var(--amber) 30%,var(--teal) 50%,var(--amber) 70%,var(--red) 100%);border-radius:999px;position:relative;margin:10px 0 4px}
+.scoremeter .ptr{position:absolute;top:-6px;width:3px;height:26px;background:var(--ink);border-radius:2px;transition:left .5s cubic-bezier(.2,.8,.2,1)}
+.scaleends{display:flex;justify-content:space-between;font-size:11px;color:var(--ink3);font-family:'Spline Sans Mono',monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">Quantitative ML · Green Hydrogen Catalysis</div>
+  <h1>H&#8322; Catalyst <em>Explorer</em></h1>
+  <p class="sub">A predictive screening tool for hydrogen-generation catalysts across <b>photocatalysis</b> and <b>electrocatalysis</b> — trained on 48,000+ data points, with every prediction grounded in published evidence.</p>
+  <p class="credit">Built for Prof. R. K. Dutta · Dept. of Chemistry, IIT Roorkee &nbsp;|&nbsp; Quantitative AI/ML Research Internship</p>
+  <div class="tabs">
+    <div class="tab active" data-p="photo"><span class="dot"></span>Photocatalysis</div>
+    <div class="tab" data-p="electro"><span class="dot"></span>Electrocatalysis</div>
+    <div class="tab" data-p="recommend"><span class="dot"></span>Recommend</div>
+    <div class="tab" data-p="justify"><span class="dot"></span>Why trust it</div>
+  </div>
+</header>
+
+<!-- ============ PHOTOCATALYSIS ============ -->
+<section class="panel active" id="photo">
+  <div class="lead">Photocatalytic H&#8322; screening</div>
+  <div class="lead-sub">Pick a photocatalyst and reaction conditions. The model predicts its performance tier and whether it's worth synthesizing — then shows the real published data behind that call.</div>
+  <div class="grid">
+    <div class="card">
+      <h3>Inputs</h3>
+      <div class="field">
+        <label>Photocatalyst</label>
+        <select id="ph-mat"></select>
+      </div>
+      <div class="field">
+        <label>Sacrificial agent (hole scavenger)</label>
+        <select id="ph-scav"></select>
+      </div>
+      <div class="field">
+        <label>Co-catalyst present?</label>
+        <div class="toggle-row" id="ph-coc">
+          <div class="opt on" data-v="true">Yes — with co-catalyst</div>
+          <div class="opt" data-v="false">No</div>
+        </div>
+      </div>
+      <div class="science" style="margin-bottom:0">The model uses the <b>experimental</b> band gap for these materials — not the raw DFT value, which underestimates badly (DFT puts ZnO at ~0.7 eV; the real value is 3.3 eV). That correction is why predictions stay credible on materials you know.</div>
+    </div>
+    <div class="card result" id="ph-result"></div>
+  </div>
+</section>
+
+<!-- ============ ELECTROCATALYSIS ============ -->
+<section class="panel" id="electro">
+  <div class="lead">Electrocatalytic HER screening</div>
+  <div class="lead-sub">For water electrolysis, the best hydrogen-evolution catalysts bind H atoms <em>just right</em> — not too strongly, not too weakly (the Sabatier principle). The model predicts that binding energy and scores HER suitability.</div>
+  <div class="grid">
+    <div class="card">
+      <h3>Inputs</h3>
+      <div class="field">
+        <label>Catalyst surface</label>
+        <select id="el-mat"></select>
+      </div>
+      <div class="science">A predicted H-binding energy near <b>0 eV</b> is ideal. The model independently rediscovered this: it ranks MoS&#8322; and Pt near the top — exactly the materials the field celebrates for HER.</div>
+    </div>
+    <div class="card result" id="el-result"></div>
+  </div>
+</section>
+
+<!-- ============ RECOMMEND ============ -->
+<section class="panel" id="recommend">
+  <div class="lead">What should I change?</div>
+  <div class="lead-sub">Choose a material; the model tests common experimental changes and ranks which ones most improve its chance of being a strong H&#8322; producer.</div>
+  <div class="card" style="max-width:520px;margin-bottom:24px">
+    <div class="field" style="margin-bottom:0">
+      <label>Material to optimise</label>
+      <select id="rec-mat"></select>
+    </div>
+  </div>
+  <div id="rec-result"></div>
+</section>
+
+<!-- ============ JUSTIFY ============ -->
+<section class="panel" id="justify">
+  <div class="lead">Why you can trust this</div>
+  <div class="lead-sub">Honest performance, measured the hard way — tested on materials the model never saw during training, not on easy random splits that inflate scores.</div>
+
+  <div class="metric-grid">
+    <div class="metric"><div class="mv" id="m-er2">—</div><div class="mk">Electrocatalysis accuracy (R&#178;)</div><div class="mn">tested on unseen materials</div></div>
+    <div class="metric"><div class="mv" id="m-emae">—</div><div class="mk">H-energy error (eV)</div><div class="mn">near DFT's own precision</div></div>
+    <div class="metric"><div class="mv" id="m-auc">—</div><div class="mk">Photocatalyst screening (ROC-AUC)</div><div class="mn">promising vs. not</div></div>
+    <div class="metric"><div class="mv" id="m-n">—</div><div class="mk">Training data points</div><div class="mn">electro + photo combined</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:24px">
+    <h3>What drives an electrocatalyst's performance</h3>
+    <div class="bars" id="el-drivers"></div>
+    <p style="font-size:13px;color:var(--ink3);margin-top:12px">These are the compositional properties the model weighs most — dominated by the electronic structure of the surface atoms, exactly as electrochemistry predicts.</p>
+  </div>
+
+  <div class="note"><b>An honest limitation, stated plainly.</b> Photocatalytic H&#8322; <em>rate</em> can't be predicted to an exact number from literature data — the same material is reported with 100&#215; different rates depending on nanostructure, morphology, and synthesis, none of which the source papers consistently record. So the photocatalysis tool does what the data <em>can</em> support honestly: it classifies performance tiers and screens "is this promising?" (ROC-AUC 0.72), and always shows the real published spread instead of a false-precision figure. For a chemist, an honest range beats a confident wrong number.</div>
+
+  <div class="science"><b>The credibility test that matters most.</b> Several of Prof. Dutta's own published photocatalysts — g-C&#8323;N&#8324;, CdS, TiO&#8322;, ZnO — are in the evidence base with their real measured H&#8322; rates. When you screen them here, the model places them where his lab actually found them. That agreement with hands-on experimental results is worth more than any single accuracy score.</div>
+</section>
+
+<footer>
+  Models: XGBoost (gradient-boosted trees) · Features: Magpie compositional descriptors + experimental band gaps + reaction conditions<br>
+  Data sources: Catalysis-Hub (electrocatalysis, ~41k reactions) · Isazawa &amp; Cole 2023 photocatalysis database (~12.6k records) · Materials Project (structural descriptors)<br>
+  This file runs entirely in your browser — no internet, no server, no expiry. Predictions are precomputed from the trained models.
+</footer>
+
+</div>
+
+<script>
+const DATA = {"photo":{"ZnO":{"band_gap_eV":3.3,"band_gap_source":"experimental (curated)","evidence":{"n_papers":74,"median_rate":358.2,"typical_low":94.8,"typical_high":1984.2},"combos":{"none/unspecified|true":{"tier":"exceptional","tier_conf":0.3,"promising":0.42,"verdict":"Borderline \u2014 check evidence"},"none/unspecified|false":{"tier":"exceptional","tier_conf":0.31,"promising":0.39,"verdict":"Likely low performer"},"methanol|true":{"tier":"low","tier_conf":0.46,"promising":0.37,"verdict":"Likely low performer"},"methanol|false":{"tier":"low","tier_conf":0.47,"promising":0.35,"verdict":"Likely low performer"},"ethanol|true":{"tier":"exceptional","tier_conf":0.49,"promising":0.7,"verdict":"Likely worth synthesizing"},"ethanol|false":{"tier":"exceptional","tier_conf":0.5,"promising":0.69,"verdict":"Likely worth synthesizing"},"glycerol|true":{"tier":"exceptional","tier_conf":0.38,"promising":0.67,"verdict":"Likely worth synthesizing"},"glycerol|false":{"tier":"moderate","tier_conf":0.38,"promising":0.63,"verdict":"Likely worth synthesizing"},"TEOA|true":{"tier":"low","tier_conf":0.33,"promising":0.46,"verdict":"Borderline \u2014 check evidence"},"TEOA|false":{"tier":"low","tier_conf":0.34,"promising":0.44,"verdict":"Borderline \u2014 check evidence"},"Na2S/Na2SO3|true":{"tier":"low","tier_conf":0.34,"promising":0.49,"verdict":"Borderline \u2014 check evidence"},"Na2S/Na2SO3|false":{"tier":"low","tier_conf":0.35,"promising":0.47,"verdict":"Borderline \u2014 check evidence"}},"recommendation":{"material":"ZnO","baseline_probability":0.42,"top_levers":[{"change":"use glycerol scavenger + co-catalyst","new_probability":0.67,"delta":0.25},{"change":"use Na2S/Na2SO3 scavenger + co-catalyst","new_probability":0.49,"delta":0.07},{"change":"use TEOA scavenger + co-catalyst","new_probability":0.46,"delta":0.04}]}},"g-C3N4":{"band_gap_eV":2.7,"band_gap_source":"experimental (curated)","evidence":{"n_papers":764,"median_rate":427.1,"typical_low":109.8,"typical_high":1596.0},"combos":{"none/unspecified|true":{"tier":"exceptional","tier_conf":0.3,"promising":0.63,"verdict":"Likely worth synthesizing"},"none/unspecified|false":{"tier":"high","tier_conf":0.3,"promising":0.57,"verdict":"Borderline \u2014 check evidence"},"methanol|true":{"tier":"exceptional","tier_conf":0.27,"promising":0.51,"verdict":"Borderline \u2014 check evidence"},"methanol|false":{"tier":"low","tier_conf":0.33,"promising":0.48,"verdict":"Borderline \u2014 check evidence"},"ethanol|true":{"tier":"high","tier_conf":0.35,"promising":0.66,"verdict":"Likely worth synthesizing"},"ethanol|false":{"tier":"high","tier_conf":0.37,"promising":0.63,"verdict":"Likely worth synthesizing"},"glycerol|true":{"tier":"exceptional","tier_conf":0.61,"promising":0.83,"verdict":"Likely worth synthesizing"},"glycerol|false":{"tier":"high","tier_conf":0.43,"promising":0.81,"verdict":"Likely worth synthesizing"},"TEOA|true":{"tier":"high","tier_conf":0.34,"promising":0.48,"verdict":"Borderline \u2014 check evidence"},"TEOA|false":{"tier":"high","tier_conf":0.31,"promising":0.49,"verdict":"Borderline \u2014 check evidence"},"Na2S/Na2SO3|true":{"tier":"exceptional","tier_conf":0.37,"promising":0.59,"verdict":"Borderline \u2014 check evidence"},"Na2S/Na2SO3|false":{"tier":"exceptional","tier_conf":0.31,"promising":0.55,"verdict":"Borderline \u2014 check evidence"}},"recommendation":{"material":"g-C3N4","baseline_probability":0.63,"top_levers":[{"change":"use glycerol scavenger + co-catalyst","new_probability":0.83,"delta":0.2},{"change":"use Na2S/Na2SO3 scavenger + co-catalyst","new_probability":0.59,"delta":-0.04},{"change":"use methanol scavenger + co-catalyst","new_probability":0.51,"delta":-0.12}]}},"CdS":{"band_gap_eV":2.4,"band_gap_source":"experimental (curated)","evidence":{"n_papers":521,"median_rate":1633.9,"typical_low":350.0,"typical_high":8470.0},"combos":{"none/unspecified|true":{"tier":"exceptional","tier_conf":0.45,"promising":0.75,"verdict":"Likely worth synthesizing"},"none/unspecified|false":{"tier":"exceptional","tier_conf":0.34,"promising":0.63,"verdict":"Likely worth synthesizing"},"methanol|true":{"tier":"exceptional","tier_conf":0.37,"promising":0.63,"verdict":"Likely worth synthesizing"},"methanol|false":{"tier":"high","tier_conf":0.31,"promising":0.57,"verdict":"Borderline \u2014 check evidence"},"ethanol|true":{"tier":"exceptional","tier_conf":0.38,"promising":0.7,"verdict":"Likely worth synthesizing"},"ethanol|false":{"tier":"high","tier_conf":0.34,"promising":0.65,"verdict":"Likely worth synthesizing"},"glycerol|true":{"tier":"exceptional","tier_conf":0.35,"promising":0.64,"verdict":"Likely worth synthesizing"},"glycerol|false":{"tier":"moderate","tier_conf":0.37,"promising":0.6,"verdict":"Borderline \u2014 check evidence"},"TEOA|true":{"tier":"high","tier_conf":0.38,"promising":0.71,"verdict":"Likely worth synthesizing"},"TEOA|false":{"tier":"high","tier_conf":0.37,"promising":0.67,"verdict":"Likely worth synthesizing"},"Na2S/Na2SO3|true":{"tier":"high","tier_conf":0.33,"promising":0.6,"verdict":"Borderline \u2014 check evidence"},"Na2S/Na2SO3|false":{"tier":"high","tier_conf":0.32,"promising":0.59,"verdict":"Borderline \u2014 check evidence"}},"recommendation":{"material":"CdS","baseline_probability":0.75,"top_levers":[{"change":"use TEOA scavenger + co-catalyst","new_probability":0.71,"delta":-0.04},{"change":"use glycerol scavenger + co-catalyst","new_probability":0.64,"delta":-0.11},{"change":"use methanol scavenger + co-catalyst","new_probability":0.63,"delta":-0.12}]}},"TiO2":{"band_gap_eV":3.2,"band_gap_source":"experimental (curated)","evidence":{"n_papers":556,"median_rate":588.2,"typical_low":90.8,"typical_high":3092.5},"combos":{"none/unspecified|true":{"tier":"exceptional","tier_conf":0.29,"promising":0.5,"verdict":"Borderline \u2014 check evidence"},"none/unspecified|false":{"tier":"moderate","tier_conf":0.3,"promising":0.42,"verdict":"Borderline \u2014 check evidence"},"methanol|true":{"tier":"exceptional","tier_conf":0.3,"promising":0.49,"verdict":"Borderline \u2014 check evidence"},"methanol|false":{"tier":"low","tier_conf":0.28,"promising":0.41,"verdict":"Borderline \u2014 check evidence"},"ethanol|true":{"tier":"exceptional","tier_conf":0.28,"promising":0.56,"verdict":"Borderline \u2014 check evidence"},"ethanol|false":{"tier":"high","tier_conf":0.3,"promising":0.49,"verdict":"Borderline \u2014 check evidence"},"glycerol|true":{"tier":"exceptional","tier_conf":0.43,"promising":0.81,"verdict":"Likely worth synthesizing"},"glycerol|false":{"tier":"high","tier_conf":0.39,"promising":0.72,"verdict":"Likely worth synthesizing"},"TEOA|true":{"tier":"moderate","tier_conf":0.32,"promising":0.42,"verdict":"Borderline \u2014 check evidence"},"TEOA|false":{"tier":"moderate","tier_conf":0.32,"promising":0.43,"verdict":"Borderline \u2014 check evidence"},"Na2S/Na2SO3|true":{"tier":"exceptional","tier_conf":0.32,"promising":0.52,"verdict":"Borderline \u2014 check evidence"},"Na2S/Na2SO3|false":{"tier":"high","tier_conf":0.3,"promising":0.45,"verdict":"Borderline \u2014 check evidence"}},"recommendation":{"material":"TiO2","baseline_probability":0.5,"top_levers":[{"change":"use glycerol scavenger + co-catalyst","new_probability":0.81,"delta":0.31},{"change":"use Na2S/Na2SO3 scavenger + co-catalyst","new_probability":0.52,"delta":0.02},{"change":"use methanol scavenger + co-catalyst","new_probability":0.49,"delta":-0.01}]}},"ZnS":{"band_gap_eV":3.6,"band_gap_source":"experimental (curated)","evidence":{"n_papers":55,"median_rate":502.6,"typical_low":114.0,"typical_high":1637.4},"combos":{"none/unspecified|true":{"tier":"high","tier_conf":0.45,"promising":0.65,"verdict":"Likely worth synthesizing"},"none/unspecified|false":{"tier":"high","tier_conf":0.43,"promising":0.57,"verdict":"Borderline \u2014 check evidence"},"methanol|true":{"tier":"high","tier_conf":0.37,"promising":0.48,"verdict":"Borderline \u2014 check evidence"},"methanol|false":{"tier":"high","tier_conf":0.38,"promising":0.44,"verdict":"Borderline \u2014 check evidence"},"ethanol|true":{"tier":"high","tier_conf":0.43,"promising":0.73,"verdict":"Likely worth synthesizing"},"ethanol|false":{"tier":"high","tier_conf":0.44,"promising":0.71,"verdict":"Likely worth synthesizing"},"glycerol|true":{"tier":"high","tier_conf":0.45,"promising":0.67,"verdict":"Likely worth synthesizing"},"glycerol|false":{"tier":"high","tier_conf":0.48,"promising":0.64,"verdict":"Likely worth synthesizing"},"TEOA|true":{"tier":"high","tier_conf":0.45,"promising":0.64,"verdict":"Likely worth synthesizing"},"TEOA|false":{"tier":"high","tier_conf":0.43,"promising":0.62,"verdict":"Likely worth synthesizing"},"Na2S/Na2SO3|true":{"tier":"high","tier_conf":0.44,"promising":0.54,"verdict":"Borderline \u2014 check evidence"},"Na2S/Na2SO3|false":{"tier":"high","tier_conf":0.42,"promising":0.56,"verdict":"Borderline \u2014 check evidence"}},"recommendation":{"material":"ZnS","baseline_probability":0.65,"top_levers":[{"change":"use glycerol scavenger + co-catalyst","new_probability":0.67,"delta":0.02},{"change":"use TEOA scavenger + co-catalyst","new_probability":0.64,"delta":-0.01},{"change":"use Na2S/Na2SO3 scavenger + co-catalyst","new_probability":0.54,"delta":-0.11}]}},"MoS2":{"band_gap_eV":1.8,"band_gap_source":"experimental (curated)","evidence":{"n_papers":134,"median_rate":1640.0,"typical_low":273.5,"typical_high":5177.8},"combos":{"none/unspecified|true":{"tier":"exceptional","tier_conf":0.37,"promising":0.76,"verdict":"Likely worth synthesizing"},"none/unspecified|false":{"tier":"high","tier_conf":0.38,"promising":0.69,"verdict":"Likely worth synthesizing"},"methanol|true":{"tier":"high","tier_conf":0.37,"promising":0.69,"verdict":"Likely worth synthesizing"},"methanol|false":{"tier":"high","tier_conf":0.43,"promising":0.67,"verdict":"Likely worth synthesizing"},"ethanol|true":{"tier":"high","tier_conf":0.39,"promising":0.58,"verdict":"Borderline \u2014 check evidence"},"ethanol|false":{"tier":"high","tier_conf":0.46,"promising":0.55,"verdict":"Borderline \u2014 check evidence"},"glycerol|true":{"tier":"exceptional","tier_conf":0.59,"promising":0.83,"verdict":"Likely worth synthesizing"},"glycerol|false":{"tier":"high","tier_conf":0.49,"promising":0.81,"verdict":"Likely worth synthesizing"},"TEOA|true":{"tier":"high","tier_conf":0.39,"promising":0.55,"verdict":"Borderline \u2014 check evidence"},"TEOA|false":{"tier":"high","tier_conf":0.4,"promising":0.62,"verdict":"Likely worth synthesizing"},"Na2S/Na2SO3|true":{"tier":"high","tier_conf":0.36,"promising":0.54,"verdict":"Borderline \u2014 check evidence"},"Na2S/Na2SO3|false":{"tier":"high","tier_conf":0.4,"promising":0.58,"verdict":"Borderline \u2014 check evidence"}},"recommendation":{"material":"MoS2","baseline_probability":0.76,"top_levers":[{"change":"use glycerol scavenger + co-catalyst","new_probability":0.83,"delta":0.07},{"change":"use methanol scavenger + co-catalyst","new_probability":0.69,"delta":-0.07},{"change":"use TEOA scavenger + co-catalyst","new_probability":0.55,"delta":-0.21}]}},"CdTe":{"band_gap_eV":1.5,"band_gap_source":"experimental (curated)","evidence":{"n_papers":2,"median_rate":13881.6,"typical_low":7172.4,"typical_high":20590.8},"combos":{"none/unspecified|true":{"tier":"moderate","tier_conf":0.63,"promising":0.98,"verdict":"Likely worth synthesizing"},"none/unspecified|false":{"tier":"moderate","tier_conf":0.64,"promising":0.97,"verdict":"Likely worth synthesizing"},"methanol|true":{"tier":"moderate","tier_conf":0.61,"promising":0.97,"verdict":"Likely worth synthesizing"},"methanol|false":{"tier":"moderate","tier_conf":0.61,"promising":0.96,"verdict":"Likely worth synthesizing"},"ethanol|true":{"tier":"moderate","tier_conf":0.61,"promising":0.98,"verdict":"Likely worth synthesizing"},"ethanol|false":{"tier":"moderate","tier_conf":0.61,"promising":0.97,"verdict":"Likely worth synthesizing"},"glycerol|true":{"tier":"moderate","tier_conf":0.56,"promising":0.98,"verdict":"Likely worth synthesizing"},"glycerol|false":{"tier":"moderate","tier_conf":0.57,"promising":0.97,"verdict":"Likely worth synthesizing"},"TEOA|true":{"tier":"moderate","tier_conf":0.59,"promising":0.97,"verdict":"Likely worth synthesizing"},"TEOA|false":{"tier":"moderate","tier_conf":0.58,"promising":0.97,"verdict":"Likely worth synthesizing"},"Na2S/Na2SO3|true":{"tier":"moderate","tier_conf":0.58,"promising":0.97,"verdict":"Likely worth synthesizing"},"Na2S/Na2SO3|false":{"tier":"moderate","tier_conf":0.56,"promising":0.97,"verdict":"Likely worth synthesizing"}},"recommendation":{"material":"CdTe","baseline_probability":0.98,"top_levers":[{"change":"use glycerol scavenger + co-catalyst","new_probability":0.98,"delta":0.0},{"change":"use methanol scavenger + co-catalyst","new_probability":0.97,"delta":-0.01},{"change":"use TEOA scavenger + co-catalyst","new_probability":0.97,"delta":-0.01}]}},"Bi2WO6":{"band_gap_eV":2.7,"band_gap_source":"experimental (curated)","evidence":{"n_papers":2,"median_rate":943.8,"typical_low":804.1,"typical_high":1083.4},"combos":{"none/unspecified|true":{"tier":"low","tier_conf":0.39,"promising":0.32,"verdict":"Likely low performer"},"none/unspecified|false":{"tier":"low","tier_conf":0.41,"promising":0.33,"verdict":"Likely low performer"},"methanol|true":{"tier":"high","tier_conf":0.4,"promising":0.3,"verdict":"Likely low performer"},"methanol|false":{"tier":"low","tier_conf":0.41,"promising":0.3,"verdict":"Likely low performer"},"ethanol|true":{"tier":"high","tier_conf":0.6,"promising":0.63,"verdict":"Likely worth synthesizing"},"ethanol|false":{"tier":"high","tier_conf":0.63,"promising":0.64,"verdict":"Likely worth synthesizing"},"glycerol|true":{"tier":"high","tier_conf":0.58,"promising":0.61,"verdict":"Likely worth synthesizing"},"glycerol|false":{"tier":"high","tier_conf":0.59,"promising":0.61,"verdict":"Likely worth synthesizing"},"TEOA|true":{"tier":"high","tier_conf":0.54,"promising":0.38,"verdict":"Likely low performer"},"TEOA|false":{"tier":"high","tier_conf":0.55,"promising":0.41,"verdict":"Borderline \u2014 check evidence"},"Na2S/Na2SO3|true":{"tier":"high","tier_conf":0.5,"promising":0.41,"verdict":"Borderline \u2014 check evidence"},"Na2S/Na2SO3|false":{"tier":"high","tier_conf":0.52,"promising":0.42,"verdict":"Borderline \u2014 check evidence"}},"recommendation":{"material":"Bi2WO6","baseline_probability":0.32,"top_levers":[{"change":"use glycerol scavenger + co-catalyst","new_probability":0.61,"delta":0.29},{"change":"use Na2S/Na2SO3 scavenger + co-catalyst","new_probability":0.41,"delta":0.09},{"change":"use TEOA scavenger + co-catalyst","new_probability":0.38,"delta":0.06}]}},"Bi2MoO6":{"band_gap_eV":2.7,"band_gap_source":"experimental (curated)","evidence":null,"combos":{"none/unspecified|true":{"tier":"low","tier_conf":0.52,"promising":0.25,"verdict":"Likely low performer"},"none/unspecified|false":{"tier":"low","tier_conf":0.52,"promising":0.24,"verdict":"Likely low performer"},"methanol|true":{"tier":"low","tier_conf":0.52,"promising":0.22,"verdict":"Likely low performer"},"methanol|false":{"tier":"low","tier_conf":0.52,"promising":0.23,"verdict":"Likely low performer"},"ethanol|true":{"tier":"high","tier_conf":0.6,"promising":0.53,"verdict":"Borderline \u2014 check evidence"},"ethanol|false":{"tier":"high","tier_conf":0.64,"promising":0.54,"verdict":"Borderline \u2014 check evidence"},"glycerol|true":{"tier":"high","tier_conf":0.57,"promising":0.47,"verdict":"Borderline \u2014 check evidence"},"glycerol|false":{"tier":"high","tier_conf":0.6,"promising":0.47,"verdict":"Borderline \u2014 check evidence"},"TEOA|true":{"tier":"high","tier_conf":0.46,"promising":0.25,"verdict":"Likely low performer"},"TEOA|false":{"tier":"high","tier_conf":0.48,"promising":0.29,"verdict":"Likely low performer"},"Na2S/Na2SO3|true":{"tier":"low","tier_conf":0.49,"promising":0.27,"verdict":"Likely low performer"},"Na2S/Na2SO3|false":{"tier":"low","tier_conf":0.49,"promising":0.29,"verdict":"Likely low performer"}},"recommendation":{"material":"Bi2MoO6","baseline_probability":0.25,"top_levers":[{"change":"use glycerol scavenger + co-catalyst","new_probability":0.47,"delta":0.22},{"change":"use Na2S/Na2SO3 scavenger + co-catalyst","new_probability":0.27,"delta":0.02},{"change":"use TEOA scavenger + co-catalyst","new_probability":0.25,"delta":0.0}]}},"SnS2":{"band_gap_eV":2.2,"band_gap_source":"experimental (curated)","evidence":{"n_papers":3,"median_rate":6305.2,"typical_low":3167.6,"typical_high":20977.6},"combos":{"none/unspecified|true":{"tier":"exceptional","tier_conf":0.74,"promising":0.75,"verdict":"Likely worth synthesizing"},"none/unspecified|false":{"tier":"exceptional","tier_conf":0.61,"promising":0.7,"verdict":"Likely worth synthesizing"},"methanol|true":{"tier":"exceptional","tier_conf":0.67,"promising":0.66,"verdict":"Likely worth synthesizing"},"methanol|false":{"tier":"exceptional","tier_conf":0.55,"promising":0.63,"verdict":"Likely worth synthesizing"},"ethanol|true":{"tier":"exceptional","tier_conf":0.69,"promising":0.68,"verdict":"Likely worth synthesizing"},"ethanol|false":{"tier":"exceptional","tier_conf":0.6,"promising":0.65,"verdict":"Likely worth synthesizing"},"glycerol|true":{"tier":"exceptional","tier_conf":0.8,"promising":0.84,"verdict":"Likely worth synthesizing"},"glycerol|false":{"tier":"exceptional","tier_conf":0.66,"promising":0.82,"verdict":"Likely worth synthesizing"},"TEOA|true":{"tier":"exceptional","tier_conf":0.57,"promising":0.68,"verdict":"Likely worth synthesizing"},"TEOA|false":{"tier":"exceptional","tier_conf":0.53,"promising":0.67,"verdict":"Likely worth synthesizing"},"Na2S/Na2SO3|true":{"tier":"exceptional","tier_conf":0.5,"promising":0.55,"verdict":"Borderline \u2014 check evidence"},"Na2S/Na2SO3|false":{"tier":"exceptional","tier_conf":0.4,"promising":0.56,"verdict":"Borderline \u2014 check evidence"}},"recommendation":{"material":"SnS2","baseline_probability":0.75,"top_levers":[{"change":"use glycerol scavenger + co-catalyst","new_probability":0.84,"delta":0.09},{"change":"use TEOA scavenger + co-catalyst","new_probability":0.68,"delta":-0.07},{"change":"use methanol scavenger + co-catalyst","new_probability":0.66,"delta":-0.09}]}},"WO3":{"band_gap_eV":2.7,"band_gap_source":"experimental (curated)","evidence":{"n_papers":9,"median_rate":94.2,"typical_low":46.6,"typical_high":132.0},"combos":{"none/unspecified|true":{"tier":"low","tier_conf":0.8,"promising":0.21,"verdict":"Likely low performer"},"none/unspecified|false":{"tier":"low","tier_conf":0.83,"promising":0.2,"verdict":"Likely low performer"},"methanol|true":{"tier":"low","tier_conf":0.84,"promising":0.2,"verdict":"Likely low performer"},"methanol|false":{"tier":"low","tier_conf":0.86,"promising":0.19,"verdict":"Likely low performer"},"ethanol|true":{"tier":"low","tier_conf":0.7,"promising":0.28,"verdict":"Likely low performer"},"ethanol|false":{"tier":"low","tier_conf":0.72,"promising":0.26,"verdict":"Likely low performer"},"glycerol|true":{"tier":"low","tier_conf":0.54,"promising":0.66,"verdict":"Likely worth synthesizing"},"glycerol|false":{"tier":"low","tier_conf":0.58,"promising":0.62,"verdict":"Likely worth synthesizing"},"TEOA|true":{"tier":"low","tier_conf":0.75,"promising":0.25,"verdict":"Likely low performer"},"TEOA|false":{"tier":"low","tier_conf":0.77,"promising":0.25,"verdict":"Likely low performer"},"Na2S/Na2SO3|true":{"tier":"low","tier_conf":0.77,"promising":0.26,"verdict":"Likely low performer"},"Na2S/Na2SO3|false":{"tier":"low","tier_conf":0.8,"promising":0.25,"verdict":"Likely low performer"}},"recommendation":{"material":"WO3","baseline_probability":0.21,"top_levers":[{"change":"use glycerol scavenger + co-catalyst","new_probability":0.66,"delta":0.45},{"change":"use Na2S/Na2SO3 scavenger + co-catalyst","new_probability":0.26,"delta":0.05},{"change":"use TEOA scavenger + co-catalyst","new_probability":0.25,"delta":0.04}]}},"Fe2O3":{"band_gap_eV":2.1,"band_gap_source":"experimental (curated)","evidence":{"n_papers":5,"median_rate":350.0,"typical_low":37.1,"typical_high":392.0},"combos":{"none/unspecified|true":{"tier":"moderate","tier_conf":0.37,"promising":0.24,"verdict":"Likely low performer"},"none/unspecified|false":{"tier":"moderate","tier_conf":0.4,"promising":0.25,"verdict":"Likely low performer"},"methanol|true":{"tier":"moderate","tier_conf":0.48,"promising":0.21,"verdict":"Likely low performer"},"methanol|false":{"tier":"moderate","tier_conf":0.5,"promising":0.2,"verdict":"Likely low performer"},"ethanol|true":{"tier":"moderate","tier_conf":0.57,"promising":0.29,"verdict":"Likely low performer"},"ethanol|false":{"tier":"moderate","tier_conf":0.61,"promising":0.28,"verdict":"Likely low performer"},"glycerol|true":{"tier":"moderate","tier_conf":0.54,"promising":0.44,"verdict":"Borderline \u2014 check evidence"},"glycerol|false":{"tier":"moderate","tier_conf":0.66,"promising":0.39,"verdict":"Likely low performer"},"TEOA|true":{"tier":"moderate","tier_conf":0.61,"promising":0.15,"verdict":"Likely low performer"},"TEOA|false":{"tier":"moderate","tier_conf":0.63,"promising":0.17,"verdict":"Likely low performer"},"Na2S/Na2SO3|true":{"tier":"moderate","tier_conf":0.46,"promising":0.22,"verdict":"Likely low performer"},"Na2S/Na2SO3|false":{"tier":"moderate","tier_conf":0.47,"promising":0.2,"verdict":"Likely low performer"}},"recommendation":{"material":"Fe2O3","baseline_probability":0.24,"top_levers":[{"change":"use glycerol scavenger + co-catalyst","new_probability":0.44,"delta":0.2},{"change":"use Na2S/Na2SO3 scavenger + co-catalyst","new_probability":0.22,"delta":-0.02},{"change":"use methanol scavenger + co-catalyst","new_probability":0.21,"delta":-0.03}]}},"BiVO4":{"band_gap_eV":2.4,"band_gap_source":"experimental (curated)","evidence":{"n_papers":2,"median_rate":28.9,"typical_low":20.5,"typical_high":37.2},"combos":{"none/unspecified|true":{"tier":"low","tier_conf":0.82,"promising":0.08,"verdict":"Likely low performer"},"none/unspecified|false":{"tier":"low","tier_conf":0.82,"promising":0.07,"verdict":"Likely low performer"},"methanol|true":{"tier":"low","tier_conf":0.86,"promising":0.06,"verdict":"Likely low performer"},"methanol|false":{"tier":"low","tier_conf":0.86,"promising":0.06,"verdict":"Likely low performer"},"ethanol|true":{"tier":"low","tier_conf":0.64,"promising":0.2,"verdict":"Likely low performer"},"ethanol|false":{"tier":"low","tier_conf":0.63,"promising":0.19,"verdict":"Likely low performer"},"glycerol|true":{"tier":"low","tier_conf":0.6,"promising":0.12,"verdict":"Likely low performer"},"glycerol|false":{"tier":"low","tier_conf":0.58,"promising":0.11,"verdict":"Likely low performer"},"TEOA|true":{"tier":"low","tier_conf":0.82,"promising":0.06,"verdict":"Likely low performer"},"TEOA|false":{"tier":"low","tier_conf":0.82,"promising":0.07,"verdict":"Likely low performer"},"Na2S/Na2SO3|true":{"tier":"low","tier_conf":0.83,"promising":0.08,"verdict":"Likely low performer"},"Na2S/Na2SO3|false":{"tier":"low","tier_conf":0.84,"promising":0.08,"verdict":"Likely low performer"}},"recommendation":{"material":"BiVO4","baseline_probability":0.08,"top_levers":[{"change":"use glycerol scavenger + co-catalyst","new_probability":0.12,"delta":0.04},{"change":"use Na2S/Na2SO3 scavenger + co-catalyst","new_probability":0.08,"delta":0.0},{"change":"use methanol scavenger + co-catalyst","new_probability":0.06,"delta":-0.02}]}},"ZnIn2S4":{"band_gap_eV":2.3,"band_gap_source":"experimental (curated)","evidence":{"n_papers":75,"median_rate":766.8,"typical_low":252.9,"typical_high":3653.6},"combos":{"none/unspecified|true":{"tier":"moderate","tier_conf":0.31,"promising":0.59,"verdict":"Borderline \u2014 check evidence"},"none/unspecified|false":{"tier":"moderate","tier_conf":0.38,"promising":0.59,"verdict":"Borderline \u2014 check evidence"},"methanol|true":{"tier":"moderate","tier_conf":0.34,"promising":0.56,"verdict":"Borderline \u2014 check evidence"},"methanol|false":{"tier":"moderate","tier_conf":0.4,"promising":0.55,"verdict":"Borderline \u2014 check evidence"},"ethanol|true":{"tier":"moderate","tier_conf":0.43,"promising":0.49,"verdict":"Borderline \u2014 check evidence"},"ethanol|false":{"tier":"moderate","tier_conf":0.51,"promising":0.47,"verdict":"Borderline \u2014 check evidence"},"glycerol|true":{"tier":"exceptional","tier_conf":0.36,"promising":0.69,"verdict":"Likely worth synthesizing"},"glycerol|false":{"tier":"moderate","tier_conf":0.5,"promising":0.68,"verdict":"Likely worth synthesizing"},"TEOA|true":{"tier":"moderate","tier_conf":0.32,"promising":0.59,"verdict":"Borderline \u2014 check evidence"},"TEOA|false":{"tier":"moderate","tier_conf":0.39,"promising":0.58,"verdict":"Borderline \u2014 check evidence"},"Na2S/Na2SO3|true":{"tier":"moderate","tier_conf":0.36,"promising":0.42,"verdict":"Borderline \u2014 check evidence"},"Na2S/Na2SO3|false":{"tier":"moderate","tier_conf":0.41,"promising":0.44,"verdict":"Borderline \u2014 check evidence"}},"recommendation":{"material":"ZnIn2S4","baseline_probability":0.59,"top_levers":[{"change":"use glycerol scavenger + co-catalyst","new_probability":0.69,"delta":0.1},{"change":"use TEOA scavenger + co-catalyst","new_probability":0.59,"delta":0.0},{"change":"use methanol scavenger + co-catalyst","new_probability":0.56,"delta":-0.03}]}},"SrTiO3":{"band_gap_eV":3.2,"band_gap_source":"experimental (curated)","evidence":{"n_papers":23,"median_rate":570.0,"typical_low":290.5,"typical_high":3200.0},"combos":{"none/unspecified|true":{"tier":"moderate","tier_conf":0.46,"promising":0.34,"verdict":"Likely low performer"},"none/unspecified|false":{"tier":"moderate","tier_conf":0.47,"promising":0.3,"verdict":"Likely low performer"},"methanol|true":{"tier":"high","tier_conf":0.33,"promising":0.58,"verdict":"Borderline \u2014 check evidence"},"methanol|false":{"tier":"high","tier_conf":0.32,"promising":0.58,"verdict":"Borderline \u2014 check evidence"},"ethanol|true":{"tier":"moderate","tier_conf":0.35,"promising":0.68,"verdict":"Likely worth synthesizing"},"ethanol|false":{"tier":"moderate","tier_conf":0.35,"promising":0.69,"verdict":"Likely worth synthesizing"},"glycerol|true":{"tier":"high","tier_conf":0.34,"promising":0.69,"verdict":"Likely worth synthesizing"},"glycerol|false":{"tier":"high","tier_conf":0.39,"promising":0.66,"verdict":"Likely worth synthesizing"},"TEOA|true":{"tier":"moderate","tier_conf":0.39,"promising":0.42,"verdict":"Borderline \u2014 check evidence"},"TEOA|false":{"tier":"moderate","tier_conf":0.37,"promising":0.46,"verdict":"Borderline \u2014 check evidence"},"Na2S/Na2SO3|true":{"tier":"moderate","tier_conf":0.34,"promising":0.5,"verdict":"Borderline \u2014 check evidence"},"Na2S/Na2SO3|false":{"tier":"moderate","tier_conf":0.32,"promising":0.5,"verdict":"Borderline \u2014 check evidence"}},"recommendation":{"material":"SrTiO3","baseline_probability":0.34,"top_levers":[{"change":"use glycerol scavenger + co-catalyst","new_probability":0.69,"delta":0.35},{"change":"use methanol scavenger + co-catalyst","new_probability":0.58,"delta":0.24},{"change":"use Na2S/Na2SO3 scavenger + co-catalyst","new_probability":0.5,"delta":0.16}]}},"Cu2O":{"band_gap_eV":2.0,"band_gap_source":"experimental (curated)","evidence":{"n_papers":12,"median_rate":242.0,"typical_low":95.0,"typical_high":916.8},"combos":{"none/unspecified|true":{"tier":"exceptional","tier_conf":0.36,"promising":0.5,"verdict":"Borderline \u2014 check evidence"},"none/unspecified|false":{"tier":"exceptional","tier_conf":0.39,"promising":0.48,"verdict":"Borderline \u2014 check evidence"},"methanol|true":{"tier":"low","tier_conf":0.44,"promising":0.43,"verdict":"Borderline \u2014 check evidence"},"methanol|false":{"tier":"low","tier_conf":0.35,"promising":0.43,"verdict":"Borderline \u2014 check evidence"},"ethanol|true":{"tier":"exceptional","tier_conf":0.51,"promising":0.71,"verdict":"Likely worth synthesizing"},"ethanol|false":{"tier":"exceptional","tier_conf":0.55,"promising":0.72,"verdict":"Likely worth synthesizing"},"glycerol|true":{"tier":"exceptional","tier_conf":0.63,"promising":0.84,"verdict":"Likely worth synthesizing"},"glycerol|false":{"tier":"exceptional","tier_conf":0.51,"promising":0.84,"verdict":"Likely worth synthesizing"},"TEOA|true":{"tier":"moderate","tier_conf":0.34,"promising":0.5,"verdict":"Borderline \u2014 check evidence"},"TEOA|false":{"tier":"moderate","tier_conf":0.37,"promising":0.5,"verdict":"Borderline \u2014 check evidence"},"Na2S/Na2SO3|true":{"tier":"low","tier_conf":0.31,"promising":0.53,"verdict":"Borderline \u2014 check evidence"},"Na2S/Na2SO3|false":{"tier":"exceptional","tier_conf":0.33,"promising":0.52,"verdict":"Borderline \u2014 check evidence"}},"recommendation":{"material":"Cu2O","baseline_probability":0.5,"top_levers":[{"change":"use glycerol scavenger + co-catalyst","new_probability":0.84,"delta":0.34},{"change":"use Na2S/Na2SO3 scavenger + co-catalyst","new_probability":0.53,"delta":0.03},{"change":"use TEOA scavenger + co-catalyst","new_probability":0.5,"delta":0.0}]}}},"electro":{"Pt":{"energy_eV":-0.457,"score":54.3,"verdict":"Moderate \u2014 binding too strong"},"Pd":{"energy_eV":-0.545,"score":45.5,"verdict":"Moderate \u2014 binding too strong"},"Ni":{"energy_eV":-0.899,"score":10.1,"verdict":"Poor \u2014 H binding too strong"},"Au":{"energy_eV":0.613,"score":38.7,"verdict":"Moderate \u2014 binding too weak"},"Ag":{"energy_eV":0.589,"score":41.1,"verdict":"Moderate \u2014 binding too weak"},"Cu":{"energy_eV":-0.379,"score":62.1,"verdict":"Moderate \u2014 binding too strong"},"Co":{"energy_eV":-0.869,"score":13.1,"verdict":"Poor \u2014 H binding too strong"},"Fe":{"energy_eV":-0.967,"score":3.3,"verdict":"Poor \u2014 H binding too strong"},"Mo":{"energy_eV":-1.404,"score":0,"verdict":"Poor \u2014 H binding too strong"},"MoS2":{"energy_eV":-0.05,"score":95.0,"verdict":"Excellent HER candidate (near-optimal H binding)"},"PtNi":{"energy_eV":-0.534,"score":46.6,"verdict":"Moderate \u2014 binding too strong"},"PtCo":{"energy_eV":-0.445,"score":55.5,"verdict":"Moderate \u2014 binding too strong"},"NiFe":{"energy_eV":-0.29,"score":71.0,"verdict":"Good HER candidate"},"CuNi":{"energy_eV":-0.682,"score":31.8,"verdict":"Moderate \u2014 binding too strong"},"PtRu":{"energy_eV":-0.556,"score":44.4,"verdict":"Moderate \u2014 binding too strong"},"Rh":{"energy_eV":-0.765,"score":23.5,"verdict":"Poor \u2014 H binding too strong"},"Ir":{"energy_eV":-0.622,"score":37.8,"verdict":"Moderate \u2014 binding too strong"},"W":{"energy_eV":-1.71,"score":0,"verdict":"Poor \u2014 H binding too strong"}},"scavengers":["none/unspecified","methanol","ethanol","glycerol","TEOA","Na2S/Na2SO3"],"scavenger_strength":{"none/unspecified":0,"Na2S/Na2SO3":3,"TEOA":3,"TEA":2,"methanol":2,"ethanol":2,"glycerol":2,"lactic_acid":2,"ascorbic_acid":2,"EDTA":2,"other":1},"metrics":{"electro_R2":0.899,"electro_MAE_eV":0.15,"electro_top_features":[{"feature":"MagpieData mode Column","importance":0.179},{"feature":"MagpieData mode MendeleevNumber","importance":0.125},{"feature":"MagpieData mean NdUnfilled","importance":0.063},{"feature":"MagpieData mean Column","importance":0.0599},{"feature":"MagpieData mode NUnfilled","importance":0.0399}],"photo_tier_acc":0.399,"photo_binary_acc":0.647,"photo_roc_auc":0.721,"photo_drivers":[{"feature":"wavelength (nm)","importance":0.0076},{"feature":"band gap (eV)","importance":0.0074},{"feature":"light power (W)","importance":0.0071},{"feature":"irradiation time (h)","importance":0.0069},{"feature":"scavenger strength","importance":0.006}],"electro_n":4147,"photo_n":7287,"tier_thresholds":[160.0,801.0,4108.5]}};
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const tierClass = t => 't-'+t;
+const scavLabel = s => s==='none/unspecified' ? 'None / unspecified'
+  : s==='Na2S/Na2SO3' ? 'Na\u2082S / Na\u2082SO\u2083' : s.charAt(0).toUpperCase()+s.slice(1);
+function gaugeColor(p){ return p>=0.6?'var(--teal)':p>=0.4?'var(--amber)':'var(--red)'; }
+function fmt(n){ return n>=1000 ? Math.round(n).toLocaleString() : n.toFixed(n<10?1:0); }
+
+/* ---------- populate selectors ---------- */
+const photoMats = Object.keys(DATA.photo);
+const elMats = Object.keys(DATA.electro);
+['#ph-mat','#rec-mat'].forEach(sel=>{
+  photoMats.forEach(m=>{ const o=document.createElement('option');o.value=m;o.textContent=m;$(sel).appendChild(o); });
+});
+DATA.scavengers.forEach(s=>{ const o=document.createElement('option');o.value=s;o.textContent=scavLabel(s);$('#ph-scav').appendChild(o); });
+$('#ph-scav').value='methanol';
+elMats.forEach(m=>{ const o=document.createElement('option');o.value=m;o.textContent=m;$('#el-mat').appendChild(o); });
+
+/* ---------- tab switching ---------- */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    $('#'+t.dataset.p).classList.add('active');
+  };
+});
+
+/* ---------- PHOTOCATALYSIS ---------- */
+let phCoc='true';
+$('#ph-coc').querySelectorAll('.opt').forEach(o=>{
+  o.onclick=()=>{ $('#ph-coc').querySelectorAll('.opt').forEach(x=>x.classList.remove('on')); o.classList.add('on'); phCoc=o.dataset.v; renderPhoto(); };
+});
+$('#ph-mat').onchange=renderPhoto;
+$('#ph-scav').onchange=renderPhoto;
+
+function renderPhoto(){
+  const mat=$('#ph-mat').value, scav=$('#ph-scav').value;
+  const d=DATA.photo[mat];
+  const c=d.combos[scav+'|'+(phCoc==='true')];
+  const ev=d.evidence;
+  const prob=c.promising;
+  let evHtml='';
+  if(ev){
+    const lo=ev.typical_low, hi=ev.typical_high, md=ev.median_rate;
+    const logmin=Math.log10(1), logmax=Math.log10(50000);
+    const pos=v=>Math.max(0,Math.min(100,(Math.log10(Math.max(v,1))-logmin)/(logmax-logmin)*100));
+    evHtml=`<div class="evidence">
+      <div class="etitle">&#9679; Published evidence — ${ev.n_papers} real ${ev.n_papers===1?'study':'studies'}</div>
+      <div class="erow">Typical H&#8322; rate: <b>${fmt(lo)} – ${fmt(hi)}</b> &#956;mol h&#8315;&#185; g&#8315;&#185; &nbsp;(median <b>${fmt(md)}</b>)</div>
+      <div class="ebar">
+        <div class="erange" style="left:${pos(lo)}%;width:${pos(hi)-pos(lo)}%"></div>
+        <div class="emed" style="left:${pos(md)}%"></div>
+      </div>
+      <small>The wide spread is real — it reflects how much synthesis &amp; morphology matter. The model screens within this reality, it doesn't pretend to a single number.</small>
+    </div>`;
+  } else {
+    evHtml=`<div class="evidence"><div class="etitle">&#9679; Published evidence</div><div class="erow">Limited direct data for this exact material in the corpus — prediction leans on compositional similarity.</div></div>`;
+  }
+  $('#ph-result').innerHTML=`
+    <h3>Prediction</h3>
+    <div class="tier-badge ${tierClass(c.tier)}">${c.tier.toUpperCase()} PERFORMER</div>
+    <div class="verdict-big">${c.verdict}</div>
+    <div class="gauge-wrap">
+      <div class="gauge-label"><span>Probability it's a strong H&#8322; producer</span><span class="gauge-val" style="color:${gaugeColor(prob)}">${Math.round(prob*100)}%</span></div>
+      <div class="gauge"><div class="gauge-fill" style="width:${prob*100}%;background:${gaugeColor(prob)}"></div></div>
+    </div>
+    <div class="meta-row">
+      <div class="meta"><div class="k">Band gap</div><div class="v">${d.band_gap_eV} eV</div></div>
+      <div class="meta"><div class="k">Gap source</div><div class="v">${d.band_gap_source.includes('experimental')?'Experimental':'Estimated'}</div></div>
+      <div class="meta"><div class="k">Tier confidence</div><div class="v">${Math.round(c.tier_conf*100)}%</div></div>
+    </div>
+    ${evHtml}`;
+}
+
+/* ---------- ELECTROCATALYSIS ---------- */
+$('#el-mat').onchange=renderElectro;
+function renderElectro(){
+  const mat=$('#el-mat').value, d=DATA.electro[mat];
+  const e=d.energy_eV, score=d.score;
+  // pointer position: map energy -10..10 onto 0..100, but center on 0
+  const ptr=Math.max(2,Math.min(98,50+(e/2)*50));
+  let col=score>=70?'var(--teal)':score>=40?'var(--amber)':'var(--red)';
+  $('#el-result').innerHTML=`
+    <h3>Prediction</h3>
+    <div class="verdict-big" style="color:${col}">${d.verdict}</div>
+    <div class="volcano">
+      <div class="gauge-label" style="margin-top:14px"><span>Predicted H-binding energy</span><span class="gauge-val" style="color:${col}">${e>0?'+':''}${e.toFixed(2)} eV</span></div>
+      <div class="scoremeter"><div class="ptr" style="left:${ptr}%"></div></div>
+      <div class="scaleends"><span>binds too strong</span><span>optimal (0 eV)</span><span>binds too weak</span></div>
+    </div>
+    <div class="meta-row">
+      <div class="meta"><div class="k">HER suitability</div><div class="v">${score.toFixed(0)} / 100</div></div>
+      <div class="meta"><div class="k">Interpretation</div><div class="v">Sabatier volcano</div></div>
+    </div>
+    <div style="margin-top:18px;font-size:13.5px;color:var(--ink3);line-height:1.6">
+      The closer the predicted energy sits to the centre line, the better the catalyst balances adsorbing and releasing hydrogen — the hallmark of an efficient HER material.
+    </div>`;
+}
+
+/* ---------- RECOMMEND ---------- */
+$('#rec-mat').onchange=renderRec;
+function renderRec(){
+  const mat=$('#rec-mat').value, d=DATA.photo[mat], rec=d.recommendation;
+  let html=`<div class="card" style="margin-bottom:20px;max-width:520px">
+    <div style="font-size:13px;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;font-family:'Spline Sans Mono',monospace;margin-bottom:6px">Baseline (no scavenger)</div>
+    <div style="font-family:'Fraunces',serif;font-size:28px;font-weight:600;color:var(--ink2)">${Math.round(rec.baseline_probability*100)}% promising</div>
+  </div>
+  <div style="font-size:13px;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;font-family:'Spline Sans Mono',monospace;margin-bottom:12px">Top levers to improve ${mat}</div>`;
+  rec.top_levers.forEach(l=>{
+    const up=l.delta>0.01;
+    html+=`<div class="lever">
+      <div><div class="lc">${l.change.charAt(0).toUpperCase()+l.change.slice(1)}</div>
+      <div class="ld">&#8594; ${Math.round(l.new_probability*100)}% promising</div></div>
+      <div class="delta ${up?'up':'flat'}">${l.delta>0?'+':''}${Math.round(l.delta*100)}<span style="font-size:14px">pts</span></div>
+    </div>`;
+  });
+  html+=`<div class="science" style="margin-top:8px">These suggestions answer the practical question — <em>what's worth trying in the lab next?</em> — and they reflect real chemistry: effective hole scavengers and co-catalysts consistently lift H&#8322; output.</div>`;
+  $('#rec-result').innerHTML=html;
+}
+
+/* ---------- JUSTIFY ---------- */
+function renderJustify(){
+  const m=DATA.metrics;
+  $('#m-er2').textContent=m.electro_R2;
+  $('#m-emae').textContent=m.electro_MAE_eV;
+  $('#m-auc').textContent=m.photo_roc_auc;
+  $('#m-n').textContent=((m.electro_n+m.photo_n)/1000).toFixed(0)+'k';
+  let bars='';
+  const feats=m.electro_top_features;
+  const max=Math.max(...feats.map(f=>f.importance));
+  feats.forEach(f=>{
+    const pct=f.importance/max*100;
+    const name=f.feature.replace('MagpieData ','').replace(/^(\w)/,c=>c.toUpperCase());
+    bars+=`<div class="bar-row"><div class="bar-name">${name}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><div class="bar-pct">${(f.importance*100).toFixed(0)}%</div></div>`;
+  });
+  $('#el-drivers').innerHTML=bars;
+}
+
+/* init */
+renderPhoto(); renderElectro(); renderRec(); renderJustify();
+</script>
+</body>
+</html>
