@@ -37,3 +37,16 @@ export function driversFor(mode: string, key: string): any[] {
   const block = mode === 'her' ? DATA.shap?.her : DATA.shap?.photo
   return (block && block[key]) || []
 }
+
+export const LEADERBOARDS: any = DATA.leaderboards || {}
+
+export function plainSummary(k: string, m: any): string {
+  const c = m.combos['methanol|true']
+  const fam = (CLASS_LABEL[m.class] || m.class).toLowerCase()
+  const ev = m.evidence
+  const cost = m.cost === 'precious' ? 'expensive' : m.cost === 'moderate' ? 'moderately priced' : 'cheap and earth-abundant'
+  const tox = m.toxic ? ', though it contains a toxic element' : ''
+  const vis = m.visible ? 'can use visible sunlight' : 'mostly needs UV light'
+  const water = m.splits_water ? 'Its energy levels line up to split water on their own.' : 'On its own its energy levels may not fully line up to split water, so it often needs help.'
+  return `${k} is a ${fam} that ${vis}. The tool rates it a ${c.tier} performer, about ${Math.round(c.promising * 100)} percent worth synthesizing${ev ? `, and ${ev.n_papers} real studies report a typical rate near ${Math.round(ev.median_rate)} units` : ''}. It is ${cost}${tox}. ${water}`
+}

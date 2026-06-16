@@ -132,6 +132,14 @@ def main():
         DATA["shap"] = json.load(open(os.path.join(DATA_DIR, "shap.json")))
     except Exception:
         DATA["shap"] = {}
+    try:
+        en = json.load(open(os.path.join(DATA_DIR, "enrich.json")))
+        for m, ex in en.get("materials", {}).items():
+            if m in DATA["photo"]:
+                DATA["photo"][m].update(ex)
+        DATA["leaderboards"] = en.get("leaderboards", {})
+    except Exception:
+        DATA["leaderboards"] = {}
 
     # honest metrics (electro untouched; photo updated to grouped numbers)
     m = json.load(open(os.path.join(MODELS_DIR, "photo_classifier_metrics.json")))

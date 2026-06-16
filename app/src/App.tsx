@@ -4,9 +4,10 @@ import { useStore } from './store'
 import { useEffect } from 'react'
 import {
   DATA, photoEntries, electroEntries, oerEntries,
-  CLASS_LABEL, CLASS_COLOR, classColor, promisingOf, tierOf, driversFor,
+  CLASS_LABEL, CLASS_COLOR, classColor, promisingOf, tierOf, driversFor, plainSummary,
 } from './data'
 import { interpret, CHIPS } from './assistant'
+import { ToolsBar, Panel } from './Panels'
 
 function Drivers({ mode, k }: { mode: string; k: string }) {
   const d = driversFor(mode, k)
@@ -162,15 +163,35 @@ function Legend() {
   )
 }
 
+const GOOD = { background: 'rgba(52,211,153,0.15)', color: '#34d399' }
+const BAD = { background: 'rgba(248,113,113,0.15)', color: '#f87171' }
+const NEU = { background: 'rgba(148,163,184,0.15)', color: '#9fb0c8' }
+const AMB = { background: 'rgba(251,191,36,0.15)', color: '#fbbf24' }
+function costStyle(c: string) { return c === 'precious' ? BAD : c === 'moderate' ? AMB : GOOD }
+
 function PhotoDetail({ k, m }: { k: string; m: any }) {
   const c = m.combos['methanol|true']
   const prom = c.promising
   const ev = m.evidence
   const [cc, clabel] = CONF[m.confidence] || CONF['model-estimate']
   const levers = m.recommendation?.top_levers || []
+  const shortlist = useStore((s) => s.shortlist)
+  const toggleShort = useStore((s) => s.toggleShort)
+  const compare = useStore((s) => s.compare)
+  const toggleCompare = useStore((s) => s.toggleCompare)
+  const eli5 = useStore((s) => s.eli5)
+  const toggleEli5 = useStore((s) => s.toggleEli5)
+  const starred = shortlist.includes(k)
+  const inComp = compare.includes(k)
   return (
     <>
       <h2>{k}</h2>
+      <div className="dactions">
+        <button className={starred ? 'on' : ''} onClick={() => toggleShort(k)}>{starred ? '★ Shortlisted' : '☆ Shortlist'}</button>
+        <button className={inComp ? 'on' : ''} onClick={() => toggleCompare(k)}>{inComp ? '✓ Comparing' : '⧉ Compare'}</button>
+        <button className={eli5 ? 'on' : ''} onClick={toggleEli5}>{eli5 ? 'Technical' : 'Explain simply'}</button>
+      </div>
+      {eli5 && <div className="eli5">{plainSummary(k, m)}</div>}
       <div>
         <span className="tier-pill" style={{ background: (TIER_COLOR[c.tier] || '#888') + '22', color: TIER_COLOR[c.tier] }}>{c.tier} performer</span>
         <span className="badge" style={{ background: cc + '22', color: cc, marginLeft: 8 }}>{clabel}{ev ? ` · ${ev.n_papers}` : ''}</span>
@@ -185,6 +206,17 @@ function PhotoDetail({ k, m }: { k: string; m: any }) {
         <div className="meta"><div className="k">Family</div><div className="v">{CLASS_LABEL[m.class] || m.class}</div></div>
         <div className="meta"><div className="k">Tier conf.</div><div className="v">{Math.round(c.tier_conf * 100)}%</div></div>
       </div>
+      <div className="scirow">
+        <div className="sci"><div className="k">Solar use</div><div className="v">{Math.round((m.solar_abs || 0) * 100)}%{m.visible ? '' : ' UV'}</div></div>
+        {m.cb != null && <div className="sci"><div className="k">Band edges</div><div className="v">{m.cb} / {m.vb} V</div></div>}
+        <div className="sci"><div className="k">Splits water</div><div className="v" style={{ color: m.splits_water ? '#34d399' : '#fbbf24' }}>{m.splits_water ? 'Yes' : 'Marginal'}</div></div>
+      </div>
+      <div className="pbadges">
+        <span className="pb" style={costStyle(m.cost)}>{m.cost === 'precious' ? 'Precious' : m.cost === 'moderate' ? 'Moderate cost' : 'Low cost'}</span>
+        <span className="pb" style={m.abundant ? GOOD : NEU}>{m.abundant ? 'Earth-abundant' : 'Less abundant'}</span>
+        <span className="pb" style={m.toxic ? BAD : GOOD}>{m.toxic ? 'Toxic element' : 'Non-toxic'}</span>
+      </div>
+      {m.stability && <div className="stab"><b>Stability.</b> {m.stability}</div>}
       {ev ? (
         <div className="ev">
           <div className="et">Published evidence · {ev.n_papers} studies</div>
@@ -193,6 +225,14 @@ function PhotoDetail({ k, m }: { k: string; m: any }) {
         </div>
       ) : (
         <div className="ev"><div className="et">Published evidence</div><div className="er">No direct corpus data; prediction from composition + experimental band gap.</div></div>
+      )}
+      {m.papers && m.papers.length > 0 && (
+        <div className="cites">
+          <div className="meta"><div className="k">Sources</div></div>
+          {m.papers.slice(0, 4).map((p: string, i: number) => (
+            <a key={i} className="cite" href={p.startsWith('10.') ? `https://doi.org/${p}` : `https://scholar.google.com/scholar?q=${encodeURIComponent(p)}`} target="_blank" rel="noreferrer">{p.length > 32 ? p.slice(0, 32) + '...' : p}</a>
+          ))}
+        </div>
       )}
       {levers.length > 0 && (
         <div className="levers">
@@ -349,19 +389,42 @@ function Hint() {
   return <div className="hint">{m.hint}</div>
 }
 
+function DeepLink() {
+  const mode = useStore((s) => s.mode)
+  const selected = useStore((s) => s.selected)
+  const setMode = useStore((s) => s.setMode)
+  const select = useStore((s) => s.select)
+  useEffect(() => {
+    const h = decodeURIComponent(location.hash.replace('#', ''))
+    if (h) {
+      const [mo, sel] = h.split('/')
+      if (mo === 'her' || mo === 'oer' || mo === 'universe') setMode(mo as any)
+      if (sel) setTimeout(() => select(sel), 140)
+    }
+  }, [])
+  useEffect(() => {
+    history.replaceState(null, '', '#' + mode + (selected ? '/' + selected : ''))
+  }, [mode, selected])
+  return null
+}
+
 export default function App() {
+  const theme = useStore((s) => s.theme)
   return (
-    <div className="app">
+    <div className={'app ' + theme}>
       <Scene />
       <TopBar />
       <Rail />
       <Assistant />
+      <ToolsBar />
+      <Panel />
       <Legend />
       <Hint />
       <Drawer />
       <TourButton />
       <Tour />
       <Onboard />
+      <DeepLink />
     </div>
   )
 }

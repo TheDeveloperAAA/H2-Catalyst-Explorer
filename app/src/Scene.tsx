@@ -48,10 +48,13 @@ function Node3D({ n }: { n: Node }) {
   const select = useStore((s) => s.select)
   const setHovered = useStore((s) => s.setHovered)
   const highlight = useStore((s) => s.highlight)
+  const theme = useStore((s) => s.theme)
   const ref = useRef<THREE.Mesh>(null!)
   const isSel = selected === n.key
   const isHov = hovered === n.key
   const dim = highlight.length > 0 && !highlight.includes(n.key)
+  const baseEmis = theme === 'light' ? 0.12 : 0.5
+  const hotEmis = theme === 'light' ? 0.55 : 1.2
   useFrame(() => {
     const t = (isSel ? 1.8 : isHov ? 1.4 : dim ? 0.5 : 1) * n.scale
     if (ref.current) ref.current.scale.lerp(new THREE.Vector3(t, t, t), 0.16)
@@ -65,7 +68,7 @@ function Node3D({ n }: { n: Node }) {
       onClick={(e) => { e.stopPropagation(); select(n.key) }}
     >
       <sphereGeometry args={[1, 22, 22]} />
-      <meshStandardMaterial color={n.color} emissive={n.color} emissiveIntensity={dim ? 0.04 : isSel || isHov ? 1.2 : 0.5} roughness={0.35} metalness={0.15} transparent opacity={dim ? 0.12 : 1} />
+      <meshStandardMaterial color={n.color} emissive={n.color} emissiveIntensity={dim ? 0.04 : isSel || isHov ? hotEmis : baseEmis} roughness={0.35} metalness={0.15} transparent opacity={dim ? 0.12 : 1} />
       {(isHov || isSel) && (
         <Html center distanceFactor={16} zIndexRange={[20, 0]}>
           <div className="tooltip3d"><div className="tn">{n.key}</div><div className="ts">{n.sub}</div></div>
@@ -91,15 +94,17 @@ function Rig({ nodes }: { nodes: Node[] }) {
 export default function Scene() {
   const mode = useStore((s) => s.mode)
   const select = useStore((s) => s.select)
+  const theme = useStore((s) => s.theme)
   const nodes = useMemo(() => layout(mode), [mode])
+  const light = theme === 'light'
   return (
     <div className="canvas-wrap">
       <Canvas camera={{ position: [11, 7, 19], fov: 50 }} onPointerMissed={() => select(null)} dpr={[1, 2]}>
-        <color attach="background" args={['#060a12']} />
-        <ambientLight intensity={0.6} />
+        <color attach="background" args={[light ? '#e9edf4' : '#060a12']} />
+        <ambientLight intensity={light ? 1.1 : 0.6} />
         <pointLight position={[20, 20, 20]} intensity={1.3} />
         <pointLight position={[-20, -10, -20]} intensity={0.4} color="#60a5fa" />
-        <Stars radius={140} depth={70} count={2200} factor={4} saturation={0} fade speed={0.4} />
+        {!light && <Stars radius={140} depth={70} count={2200} factor={4} saturation={0} fade speed={0.4} />}
         {nodes.map((n) => <Node3D key={n.key} n={n} />)}
         <Rig nodes={nodes} />
       </Canvas>
