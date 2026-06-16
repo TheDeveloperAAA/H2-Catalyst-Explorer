@@ -1,10 +1,19 @@
-import { useMemo, useRef } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { useEffect, useMemo, useRef } from 'react'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls, Stars, Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { photoEntries, electroEntries, oerEntries, classColor, promisingOf } from './data'
 import { useStore } from './store'
 import type { Mode } from './store'
+import { setXR } from './vr'
+
+function XRBridge() {
+  const gl = useThree((s) => s.gl)
+  const scene = useThree((s) => s.scene)
+  const camera = useThree((s) => s.camera)
+  useEffect(() => { setXR(gl, scene, camera) }, [gl, scene, camera])
+  return null
+}
 
 type Node = { key: string; m: any; pos: [number, number, number]; color: string; scale: number; sub: string }
 
@@ -28,7 +37,7 @@ function layout(mode: Mode): Node[] {
     return electroEntries.map(([k, m], i) => ({
       key: k, m,
       pos: [m.energy_eV * 5, m.score / 9 - 4, ((i % 6) - 2.5) * 1.3],
-      color: m.score >= 70 ? '#34d399' : m.score >= 40 ? '#fbbf24' : '#f87171',
+      color: m.score >= 70 ? '#57d39b' : m.score >= 40 ? '#efc169' : '#ef8d8d',
       scale: 0.32 + m.score / 200,
       sub: `${m.energy_eV > 0 ? '+' : ''}${m.energy_eV} eV · score ${Math.round(m.score)}`,
     }))
@@ -36,7 +45,7 @@ function layout(mode: Mode): Node[] {
   return oerEntries.map(([k, m], i) => ({
     key: k, m,
     pos: [(m.descriptor - 1.6) * 4, m.score / 9 - 4, ((i % 9) - 4) * 1.1],
-    color: m.score >= 70 ? '#34d399' : m.score >= 40 ? '#fbbf24' : '#f87171',
+    color: m.score >= 70 ? '#57d39b' : m.score >= 40 ? '#efc169' : '#ef8d8d',
     scale: 0.22 + m.score / 260,
     sub: `descriptor ${m.descriptor} eV · score ${Math.round(m.score)}`,
   }))
@@ -99,8 +108,9 @@ export default function Scene() {
   const light = theme === 'light'
   return (
     <div className="canvas-wrap">
-      <Canvas camera={{ position: [11, 7, 19], fov: 50 }} onPointerMissed={() => select(null)} dpr={[1, 2]}>
-        <color attach="background" args={[light ? '#e9edf4' : '#060a12']} />
+      <Canvas camera={{ position: [11, 7, 19], fov: 50 }} onPointerMissed={() => select(null)} dpr={[1, 2]} gl={{ preserveDrawingBuffer: true, antialias: true }}>
+        <XRBridge />
+        <color attach="background" args={[light ? '#eef2f4' : '#0b1418']} />
         <ambientLight intensity={light ? 1.1 : 0.6} />
         <pointLight position={[20, 20, 20]} intensity={1.3} />
         <pointLight position={[-20, -10, -20]} intensity={0.4} color="#60a5fa" />

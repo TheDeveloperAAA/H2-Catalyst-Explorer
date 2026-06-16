@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useStore } from './store'
 import { photoEntries, oerEntries, electroEntries, LEADERBOARDS, DATA, CLASS_LABEL, classColor, promisingOf } from './data'
+import { exportImage, enterVR, vrSupported } from './vr'
 
 const TOOLS: { id: any; ico: string; label: string }[] = [
   { id: 'filters', ico: '☷', label: 'Filters' },
@@ -16,15 +17,19 @@ export function ToolsBar() {
   const shortlist = useStore((s) => s.shortlist)
   const theme = useStore((s) => s.theme)
   const toggleTheme = useStore((s) => s.toggleTheme)
+  const [vr, setVr] = useState(false)
+  useEffect(() => { vrSupported().then(setVr) }, [])
   return (
-    <div className="tools glass">
+    <div className="tools glass" role="toolbar" aria-label="Tools">
       {TOOLS.map((t) => (
-        <button key={t.id} className={panel === t.id ? 'on' : ''} onClick={() => setPanel(panel === t.id ? null : t.id)} title={t.label} aria-label={t.label}>
-          <span className="ti">{t.ico}</span>
+        <button key={t.id} className={panel === t.id ? 'on' : ''} onClick={() => setPanel(panel === t.id ? null : t.id)} title={t.label} aria-label={t.label} aria-pressed={panel === t.id}>
+          <span className="ti" aria-hidden="true">{t.ico}</span>
           {t.id === 'shortlist' && shortlist.length > 0 && <span className="badge-count">{shortlist.length}</span>}
         </button>
       ))}
-      <button onClick={toggleTheme} title="Theme" aria-label="theme"><span className="ti">{theme === 'dark' ? '☀' : '☾'}</span></button>
+      <button onClick={exportImage} title="Save image (E)" aria-label="Save image"><span className="ti" aria-hidden="true">⤓</span></button>
+      {vr && <button onClick={enterVR} title="Enter VR" aria-label="Enter VR"><span className="ti" aria-hidden="true">▣</span></button>}
+      <button onClick={toggleTheme} title="Theme (G)" aria-label="Toggle light or dark theme"><span className="ti" aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span></button>
     </div>
   )
 }

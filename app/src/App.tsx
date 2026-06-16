@@ -8,6 +8,42 @@ import {
 } from './data'
 import { interpret, CHIPS } from './assistant'
 import { ToolsBar, Panel } from './Panels'
+import { exportImage } from './vr'
+
+function KeyShortcuts() {
+  const setMode = useStore((s) => s.setMode)
+  const setPanel = useStore((s) => s.setPanel)
+  const select = useStore((s) => s.select)
+  const endTour = useStore((s) => s.endTour)
+  const toggleTheme = useStore((s) => s.toggleTheme)
+  const startTour = useStore((s) => s.startTour)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') {
+        if (e.key === 'Escape') (e.target as HTMLElement).blur()
+        return
+      }
+      const k = e.key.toLowerCase()
+      if (k === '1') setMode('universe')
+      else if (k === '2') setMode('her')
+      else if (k === '3') setMode('oer')
+      else if (k === 'f') setPanel('filters')
+      else if (k === 'l') setPanel('leaderboards')
+      else if (k === 'c') setPanel('compare')
+      else if (k === 'h') setPanel('hetero')
+      else if (k === 's') setPanel('shortlist')
+      else if (k === 'g') toggleTheme()
+      else if (k === 't') startTour()
+      else if (k === 'e') exportImage()
+      else if (k === '/') { e.preventDefault(); (document.querySelector('.searchwrap input') as HTMLElement)?.focus() }
+      else if (k === 'escape') { setPanel(null); select(null); endTour() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+  return null
+}
 
 function Drivers({ mode, k }: { mode: string; k: string }) {
   const d = driversFor(mode, k)
@@ -412,7 +448,9 @@ export default function App() {
   const theme = useStore((s) => s.theme)
   return (
     <div className={'app ' + theme}>
+      <h1 className="sr-only">H2 Catalyst Explorer: a 3D interactive dashboard for screening photocatalysts and electrocatalysts for green hydrogen, grounded in published evidence.</h1>
       <Scene />
+      <KeyShortcuts />
       <TopBar />
       <Rail />
       <Assistant />

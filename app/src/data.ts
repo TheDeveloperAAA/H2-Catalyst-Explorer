@@ -14,10 +14,10 @@ export const CLASS_LABEL: Record<string, string> = {
 }
 
 export const CLASS_COLOR: Record<string, string> = {
-  oxide: '#3b82f6', sulfide: '#f59e0b', selenide: '#a855f7', telluride: '#ec4899',
-  perovskite: '#10b981', halide_perovskite: '#14b8a6', pyrochlore: '#ef4444', layered: '#8b5cf6',
-  carbon_nitride: '#22c55e', nitride: '#0ea5e9', carbon: '#94a3b8', framework: '#eab308',
-  mxene: '#f43f5e', other: '#64748b',
+  oxide: '#5b8ff9', sulfide: '#f0b24a', selenide: '#9d83e0', telluride: '#e7799e',
+  perovskite: '#45c98a', halide_perovskite: '#3fc4c0', pyrochlore: '#ec7a52', layered: '#7d72ee',
+  carbon_nitride: '#6ece74', nitride: '#4aa6e2', carbon: '#97a6b6', framework: '#e3c255',
+  mxene: '#ee7390', other: '#8090a0',
 }
 
 export function promisingOf(m: any): number {
