@@ -69,12 +69,26 @@ def build_photo(p, lib):
         }
     return photo
 
-def build_overlays(DATA):
-    """Curated overlays (OER, electrolyte, defects) + litmus benchmark. All flagged in UI."""
-    def oer_score(eta): return max(0.0, min(100.0, round(100 * (1 - (eta - 250) / 320.0), 1)))
-    DATA["oer"] = {m: {"eta_mV": v["eta_mV"], "electrolyte": v["electrolyte"], "class": v["class"],
-                       "verdict": co.oer_verdict(v["eta_mV"]), "score": oer_score(v["eta_mV"])}
-                   for m, v in co.OER_CATALYSTS.items()}
+def build_overlays(DATA, p):
+    """Trained OER + curated overlays (electrolyte, defects) + litmus benchmark."""
+    # OER: TRAINED model predictions; keep curated literature overpotential as a cross-check
+    oer_mats = {}
+    for m, v in co.OER_CATALYSTS.items():
+        oer_mats[m] = {"lit_eta_mV": v["eta_mV"], "electrolyte": v["electrolyte"], "class": v["class"]}
+    for m in DATA["photo"]:
+        cls = DATA["photo"][m].get("class")
+        if cls in ("oxide", "perovskite", "pyrochlore") and m not in oer_mats:
+            oer_mats[m] = {"lit_eta_mV": None, "electrolyte": "alkaline", "class": cls}
+    DATA["oer"] = {}
+    for m, info in oer_mats.items():
+        r = p.predict_oer(m, "110")
+        if r is None:
+            continue
+        DATA["oer"][m] = {"descriptor": r["oer_descriptor_eV"], "score": r["oer_score"],
+                          "overpotential_V": r["overpotential_V"], "verdict": r["verdict"],
+                          "dG_O": r["dG_O_eV"], "dG_OH": r["dG_OH_eV"], "dG_OOH": r["dG_OOH_eV"],
+                          "lit_eta_mV": info["lit_eta_mV"], "electrolyte": info["electrolyte"],
+                          "class": info["class"]}
     DATA["electrolyte_notes"] = {s: {"acidic": co.her_electrolyte_note(s, "acidic"),
                                      "alkaline": co.her_electrolyte_note(s, "alkaline")}
                                  for s in DATA["electro"]}
@@ -113,7 +127,7 @@ def main():
     lib = lib.sort_values(["n_papers", "material"], ascending=[False, True])
 
     DATA["photo"] = build_photo(p, lib)
-    build_overlays(DATA)
+    build_overlays(DATA, p)
 
     # honest metrics (electro untouched; photo updated to grouped numbers)
     m = json.load(open(os.path.join(MODELS_DIR, "photo_classifier_metrics.json")))
@@ -122,6 +136,13 @@ def main():
     DATA["metrics"]["photo_roc_auc"]    = m["binary_model"]["roc_auc"]
     DATA["metrics"]["photo_validation"] = "GroupShuffleSplit by material (unseen materials)"
     DATA["metrics"]["photo_n_materials"] = len(DATA["photo"])
+    try:
+        om = json.load(open(os.path.join(MODELS_DIR, "oer_metrics.json")))
+        DATA["metrics"]["oer_R2"] = om["R2"]
+        DATA["metrics"]["oer_cv_R2"] = om["cv_R2_mean"]
+        DATA["metrics"]["oer_n"] = om["n_rows"]
+    except Exception:
+        pass
 
     # write JSON source of truth + inline into index.html
     payload = json.dumps(DATA, ensure_ascii=False)

@@ -53,6 +53,14 @@ class H2Predictor:
         self.m_bin = xgb.Booster(); self.m_bin.load_model(f"{model_dir}/model_photo_binary.json")
         with open(f"{model_dir}/encoders_photo_clf.pkl", "rb") as f:
             self.enc_p = pickle.load(f)
+        # OER (trained) - optional, engine still works if absent
+        self.m_oer = None
+        try:
+            self.m_oer = xgb.Booster(); self.m_oer.load_model(f"{model_dir}/model_oer.json")
+            with open(f"{model_dir}/encoders_oer.pkl", "rb") as f:
+                self.enc_oer = pickle.load(f)
+        except Exception:
+            self.m_oer = None
         # evidence
         import pandas as pd
         self.evidence = pd.read_csv(f"{model_dir}/photo_evidence_by_material.csv")
@@ -83,6 +91,32 @@ class H2Predictor:
                 "predicted_H_energy_eV": round(dE, 3),
                 "her_suitability_score": round(suitability, 1),
                 "verdict": verdict}
+
+    def predict_oer(self, surface, facet="111"):
+        """Predict OER intermediate energies + activity descriptor dG(O*)-dG(OH*).
+        Optimal descriptor is ~1.6 eV by the standard OER scaling-relation volcano."""
+        if self.m_oer is None:
+            return None
+        e = self.enc_oer
+        feat = _magpie(surface, e["magpie_means"])
+        fac = e["ohe_facet"].transform([[str(facet)]])
+        def en(ads):
+            a = e["ohe_ads"].transform([[ads]])
+            X = hstack([csr_matrix([feat]), fac, a]).tocsr()
+            return float(self.m_oer.predict(xgb.DMatrix(X))[0])
+        dG_O, dG_OH, dG_OOH = en("O*"), en("OH*"), en("OOH*")
+        desc = dG_O - dG_OH
+        score = max(0.0, 100 * (1 - min(abs(desc - 1.6) / 1.6, 1)))
+        steps = [dG_OH, dG_O - dG_OH, dG_OOH - dG_O, 4.92 - dG_OOH]
+        eta = max(steps) - 1.23
+        if abs(desc - 1.6) < 0.3:   verdict = "Excellent OER candidate (near-optimal descriptor)"
+        elif abs(desc - 1.6) < 0.6: verdict = "Good OER candidate"
+        elif abs(desc - 1.6) < 1.0: verdict = "Moderate OER activity"
+        else:                       verdict = "Poor - descriptor far from optimal"
+        return {"surface": surface, "facet": facet,
+                "dG_O_eV": round(dG_O, 2), "dG_OH_eV": round(dG_OH, 2), "dG_OOH_eV": round(dG_OOH, 2),
+                "oer_descriptor_eV": round(desc, 2), "overpotential_V": round(max(0.0, eta), 2),
+                "oer_score": round(score, 1), "verdict": verdict}
 
     # ----------------------------------------------------------------- #
     #  PHOTOCATALYSIS
