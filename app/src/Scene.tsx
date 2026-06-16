@@ -47,12 +47,14 @@ function Node3D({ n }: { n: Node }) {
   const hovered = useStore((s) => s.hovered)
   const select = useStore((s) => s.select)
   const setHovered = useStore((s) => s.setHovered)
+  const highlight = useStore((s) => s.highlight)
   const ref = useRef<THREE.Mesh>(null!)
   const isSel = selected === n.key
   const isHov = hovered === n.key
+  const dim = highlight.length > 0 && !highlight.includes(n.key)
   useFrame(() => {
-    const t = (isSel ? 1.8 : isHov ? 1.4 : 1) * n.scale
-    if (ref.current) ref.current.scale.lerp(new THREE.Vector3(t, t, t), 0.18)
+    const t = (isSel ? 1.8 : isHov ? 1.4 : dim ? 0.5 : 1) * n.scale
+    if (ref.current) ref.current.scale.lerp(new THREE.Vector3(t, t, t), 0.16)
   })
   return (
     <mesh
@@ -63,7 +65,7 @@ function Node3D({ n }: { n: Node }) {
       onClick={(e) => { e.stopPropagation(); select(n.key) }}
     >
       <sphereGeometry args={[1, 22, 22]} />
-      <meshStandardMaterial color={n.color} emissive={n.color} emissiveIntensity={isSel || isHov ? 1.2 : 0.5} roughness={0.35} metalness={0.15} />
+      <meshStandardMaterial color={n.color} emissive={n.color} emissiveIntensity={dim ? 0.04 : isSel || isHov ? 1.2 : 0.5} roughness={0.35} metalness={0.15} transparent opacity={dim ? 0.12 : 1} />
       {(isHov || isSel) && (
         <Html center distanceFactor={16} zIndexRange={[20, 0]}>
           <div className="tooltip3d"><div className="tn">{n.key}</div><div className="ts">{n.sub}</div></div>

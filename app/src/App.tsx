@@ -6,6 +6,7 @@ import {
   DATA, photoEntries, electroEntries, oerEntries,
   CLASS_LABEL, CLASS_COLOR, classColor, promisingOf, tierOf, driversFor,
 } from './data'
+import { interpret, CHIPS } from './assistant'
 
 function Drivers({ mode, k }: { mode: string; k: string }) {
   const d = driversFor(mode, k)
@@ -77,29 +78,63 @@ function entriesFor(mode: string): [string, any][] {
   return mode === 'her' ? electroEntries : mode === 'oer' ? oerEntries : photoEntries
 }
 
-function Search() {
-  const mode = useStore((s) => s.mode)
+function Assistant() {
+  const setMode = useStore((s) => s.setMode)
   const select = useStore((s) => s.select)
+  const setHighlight = useStore((s) => s.setHighlight)
   const [q, setQ] = useState('')
-  const list = useMemo(() => {
-    const all = entriesFor(mode)
-    if (!q.trim()) return []
+  const [resp, setResp] = useState<any>(null)
+  const [focused, setFocused] = useState(false)
+
+  const apply = (r: any) => {
+    setResp(r)
+    const act = () => { if (r.highlight) setHighlight(r.highlight); if (r.select) select(r.select) }
+    if (r.mode) { setMode(r.mode); setTimeout(act, 90) } else act()
+  }
+  const run = (text: string) => { setQ(text); apply(interpret(text)) }
+
+  const matches = useMemo(() => {
+    if (!q.trim() || resp) return []
     const t = q.toLowerCase()
-    return all.filter(([k, m]) => (k + ' ' + (m.class || '')).toLowerCase().includes(t)).slice(0, 8)
-  }, [q, mode])
+    return photoEntries.filter(([k, m]) => (k + ' ' + (m.class || '')).toLowerCase().includes(t)).slice(0, 6)
+  }, [q, resp])
+
   return (
     <div className="searchwrap">
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a material (CdS, perovskite, MoS2)..." />
-      {list.length > 0 && (
+      <input
+        value={q}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setTimeout(() => setFocused(false), 160)}
+        onChange={(e) => { setQ(e.target.value); setResp(null) }}
+        onKeyDown={(e) => { if (e.key === 'Enter' && q.trim()) run(q) }}
+        placeholder="Ask anything: best cheap oxides, top HER catalysts, what to try for CdS..."
+      />
+      {resp ? (
+        <div className="assistant-card glass">
+          <button className="ac-close" onClick={() => { setResp(null); setHighlight([]); setQ('') }} aria-label="clear">{'×'}</button>
+          <div className="ac-text">{resp.text}</div>
+          {resp.results && resp.results.length > 0 && (
+            <div className="ac-results">{resp.results.map((k: string) => <button key={k} className="ac-chip" onClick={() => select(k)}>{k}</button>)}</div>
+          )}
+          {resp.chips && (
+            <div className="ac-chips">{resp.chips.slice(0, 4).map((c: string) => <button key={c} className="ac-suggest" onClick={() => run(c)}>{c}</button>)}</div>
+          )}
+        </div>
+      ) : matches.length > 0 ? (
         <div className="results glass">
-          {list.map(([k, m]) => (
-            <div className="r" key={k} onClick={() => { select(k); setQ('') }}>
-              <span><span className="dot" style={{ background: mode === 'universe' ? classColor(m.class) : '#2dd4bf' }} />{k}</span>
-              <span style={{ fontSize: 11, color: 'var(--ink3)' }}>{mode === 'universe' ? CLASS_LABEL[m.class] : ''}</span>
+          {matches.map(([k, m]) => (
+            <div className="r" key={k} onClick={() => { setMode('universe'); setTimeout(() => select(k), 60); setQ('') }}>
+              <span><span className="dot" style={{ background: classColor(m.class) }} />{k}</span>
+              <span style={{ fontSize: 11, color: 'var(--ink3)' }}>{CLASS_LABEL[m.class]}</span>
             </div>
           ))}
         </div>
-      )}
+      ) : focused && !q ? (
+        <div className="results glass">
+          <div className="ac-hint-label">Try asking</div>
+          {CHIPS.map((c) => <div className="r" key={c} onMouseDown={() => run(c)}>{c}</div>)}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -320,7 +355,7 @@ export default function App() {
       <Scene />
       <TopBar />
       <Rail />
-      <Search />
+      <Assistant />
       <Legend />
       <Hint />
       <Drawer />

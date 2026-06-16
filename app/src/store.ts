@@ -9,10 +9,12 @@ interface S {
   search: string
   onboarded: boolean
   tour: number
+  highlight: string[]
   setMode: (m: Mode) => void
   select: (s: string | null) => void
   setHovered: (s: string | null) => void
   setSearch: (q: string) => void
+  setHighlight: (h: string[]) => void
   dismissOnboard: () => void
   startTour: () => void
   nextTour: () => void
@@ -26,7 +28,9 @@ export const useStore = create<S>((set) => ({
   search: '',
   onboarded: false,
   tour: -1,
-  setMode: (mode) => set({ mode, selected: null, search: '' }),
+  highlight: [],
+  setMode: (mode) => set({ mode, selected: null, search: '', highlight: [] }),
+  setHighlight: (highlight) => set({ highlight }),
   select: (selected) => set({ selected }),
   setHovered: (hovered) => set({ hovered }),
   setSearch: (search) => set({ search }),
