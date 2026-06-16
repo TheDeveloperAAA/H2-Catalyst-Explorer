@@ -125,8 +125,8 @@ def main():
 
     # write JSON source of truth + inline into index.html
     payload = json.dumps(DATA, ensure_ascii=False)
-    if "—" in payload:                            # never emit an em dash
-        payload = payload.replace("—", "-")
+    if "-" in payload:                            # never emit an em dash
+        payload = payload.replace("-", "-")
     with open(os.path.join(DATA_DIR, "dashboard_data.json"), "w") as f:
         f.write(payload)
 

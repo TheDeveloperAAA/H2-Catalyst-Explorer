@@ -76,9 +76,9 @@ class H2Predictor:
         elif abs(dE) < 0.35:
             verdict = "Good HER candidate"
         elif abs(dE) < 0.7:
-            verdict = "Moderate — binding too " + ("strong" if dE < 0 else "weak")
+            verdict = "Moderate - binding too " + ("strong" if dE < 0 else "weak")
         else:
-            verdict = "Poor — H binding too " + ("strong" if dE < 0 else "weak")
+            verdict = "Poor - H binding too " + ("strong" if dE < 0 else "weak")
         return {"surface": surface, "facet": facet,
                 "predicted_H_energy_eV": round(dE, 3),
                 "her_suitability_score": round(suitability, 1),
