@@ -132,7 +132,7 @@ class H2Predictor:
             "tier_confidence": round(float(tier_proba[tier_idx]), 2),
             "promising_probability": round(promising_proba, 2),
             "promising_verdict": ("Likely worth synthesizing" if promising_proba >= 0.6
-                                  else "Borderline — check evidence" if promising_proba >= 0.4
+                                  else "Borderline - check evidence" if promising_proba >= 0.4
                                   else "Likely low performer"),
             "published_evidence": ev_range,
             "conditions_used": {"scavenger": scavenger, "scavenger_strength": scav_str,

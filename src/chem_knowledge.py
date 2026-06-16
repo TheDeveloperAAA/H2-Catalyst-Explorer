@@ -158,6 +158,29 @@ def experimental_gap(canonical_name):
         return None
     return EXPERIMENTAL_BANDGAP.get(canonical_name)
 
+# --------------------------------------------------------------------------- #
+# Merge the curated reliable photocatalyst library (124 materials, real band
+# gaps + class) so the engine uses the same gaps the model was trained on.
+# Existing hand-curated values keep precedence; the library adds the rest.
+# --------------------------------------------------------------------------- #
+MATERIAL_CLASS = {}
+def _load_curated_library():
+    import os, csv
+    here = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(here, "..", "data", "photocatalysts_curated.csv")
+    try:
+        with open(path) as f:
+            for row in csv.DictReader(f):
+                m = (row.get("material") or "").strip()
+                if not m:
+                    continue
+                if m not in EXPERIMENTAL_BANDGAP:
+                    EXPERIMENTAL_BANDGAP[m] = float(row["band_gap_eV"])
+                MATERIAL_CLASS[m] = row.get("class", "")
+    except Exception:
+        pass  # engine still works on the built-in dict if the CSV is absent
+_load_curated_library()
+
 if __name__ == "__main__":
     # quick sanity print
     print(f"Curated experimental band gaps: {len(EXPERIMENTAL_BANDGAP)} materials")
