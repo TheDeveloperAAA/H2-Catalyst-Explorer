@@ -1,10 +1,29 @@
 import { useMemo, useState } from 'react'
 import Scene from './Scene'
 import { useStore } from './store'
+import { useEffect } from 'react'
 import {
   DATA, photoEntries, electroEntries, oerEntries,
-  CLASS_LABEL, CLASS_COLOR, classColor, promisingOf, tierOf,
+  CLASS_LABEL, CLASS_COLOR, classColor, promisingOf, tierOf, driversFor,
 } from './data'
+
+function Drivers({ mode, k }: { mode: string; k: string }) {
+  const d = driversFor(mode, k)
+  if (!d.length) return null
+  const max = Math.max(...d.map((x: any) => Math.abs(x.impact)))
+  return (
+    <div className="drivers">
+      <div className="meta"><div className="k">Why this score (SHAP)</div></div>
+      {d.map((x: any, i: number) => (
+        <div className="driver" key={i}>
+          <span className="dn">{x.feature}</span>
+          <span className="dbar"><span className="dfill" style={{ width: `${(Math.abs(x.impact) / max) * 100}%`, background: x.dir === 'up' ? '#34d399' : '#f87171' }} /></span>
+          <span className="dd" style={{ color: x.dir === 'up' ? '#34d399' : '#f87171' }}>{x.dir === 'up' ? '↑' : '↓'}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 const M = DATA.metrics
 
@@ -151,6 +170,7 @@ function PhotoDetail({ k, m }: { k: string; m: any }) {
           ))}
         </div>
       )}
+      <Drivers mode="universe" k={k} />
     </>
   )
 }
@@ -170,6 +190,7 @@ function HerDetail({ k, m }: { k: string; m: any }) {
         <div className="meta"><div className="k">Reading</div><div className="v">Sabatier volcano</div></div>
       </div>
       <div style={{ fontSize: 13, color: 'var(--ink3)', lineHeight: 1.6 }}>A binding energy near 0 eV is ideal. Trained on Catalysis-Hub DFT, grouped R2 = {M.electro_R2}.</div>
+      <Drivers mode="her" k={k} />
     </>
   )
 }
@@ -212,9 +233,59 @@ function Drawer() {
   )
 }
 
+const TOUR = [
+  { mode: 'universe', sel: null, title: 'The catalyst universe', text: '127 real photocatalysts. Higher and brighter means more promising for hydrogen, and colors are material families.' },
+  { mode: 'universe', sel: 'CdS', title: 'A proven performer', text: 'CdS: a high-tier sulfide backed by 521 published studies. Click any point to inspect it like this.' },
+  { mode: 'universe', sel: 'g-C3N4', title: 'The workhorse', text: 'g-C3N4: the most-studied visible-light photocatalyst, with the widest evidence base.' },
+  { mode: 'her', sel: 'MoS2', title: 'The HER champion', text: 'In the HER volcano, with no hints, the model places MoS2 at the peak, exactly the catalyst the field celebrates.' },
+  { mode: 'her', sel: 'Pt', title: 'An honest miss', text: 'Pt sits mid-pack here: its (111) facet binds hydrogen slightly too strongly, which is real chemistry. The tool shows misses, not just wins.' },
+  { mode: 'oer', sel: 'NiOOH', title: 'Oxygen evolution', text: 'For the OER half-reaction, the trained model ranks earth-abundant NiOOH and cobalt oxides highest, ideal for green hydrogen.' },
+  { mode: 'universe', sel: null, title: 'Your turn', text: 'Search any material, click any point, switch modes. Every number is grounded in published evidence.' },
+]
+
+function Tour() {
+  const tour = useStore((s) => s.tour)
+  const setMode = useStore((s) => s.setMode)
+  const select = useStore((s) => s.select)
+  const next = useStore((s) => s.nextTour)
+  const end = useStore((s) => s.endTour)
+  useEffect(() => {
+    if (tour < 0) return
+    if (tour >= TOUR.length) { end(); return }
+    const step = TOUR[tour]
+    setMode(step.mode as any)
+    const t = setTimeout(() => select(step.sel), 350)
+    const auto = setTimeout(() => next(), 7000)
+    return () => { clearTimeout(t); clearTimeout(auto) }
+  }, [tour])
+  if (tour < 0 || tour >= TOUR.length) return null
+  const step = TOUR[tour]
+  return (
+    <div className="tour glass">
+      <div className="tour-step">{tour + 1} / {TOUR.length}</div>
+      <h3>{step.title}</h3>
+      <p>{step.text}</p>
+      <div className="tour-actions">
+        <button className="skip" onClick={end}>Skip</button>
+        <button className="next" onClick={next}>{tour === TOUR.length - 1 ? 'Done' : 'Next'}</button>
+      </div>
+    </div>
+  )
+}
+
+function TourButton() {
+  const tour = useStore((s) => s.tour)
+  const onboarded = useStore((s) => s.onboarded)
+  const selected = useStore((s) => s.selected)
+  const startTour = useStore((s) => s.startTour)
+  if (tour >= 0 || !onboarded || selected) return null
+  return <button className="tour-launch" onClick={startTour}>{'▶'} Take the tour</button>
+}
+
 function Onboard() {
   const onboarded = useStore((s) => s.onboarded)
   const dismiss = useStore((s) => s.dismissOnboard)
+  const startTour = useStore((s) => s.startTour)
   if (onboarded) return null
   return (
     <div className="onboard">
@@ -226,7 +297,10 @@ function Onboard() {
           <div className="step"><div className="si">{'⊕'}</div><div className="st">Scroll to zoom</div></div>
           <div className="step"><div className="si">{'→'}</div><div className="st">Click a point</div></div>
         </div>
-        <button onClick={dismiss}>Explore</button>
+        <div className="ob-actions">
+          <button className="ghost" onClick={dismiss}>Explore freely</button>
+          <button onClick={startTour}>Take the guided tour</button>
+        </div>
       </div>
     </div>
   )
@@ -250,6 +324,8 @@ export default function App() {
       <Legend />
       <Hint />
       <Drawer />
+      <TourButton />
+      <Tour />
       <Onboard />
     </div>
   )

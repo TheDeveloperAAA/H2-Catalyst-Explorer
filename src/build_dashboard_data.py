@@ -27,7 +27,7 @@ import curated_overlays as co
 from paths import MODELS_DIR, DATA_DIR
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-INDEX = os.path.join(ROOT, "index.html")
+INDEX = os.path.join(ROOT, "classic.html")
 SCAVS = ["none/unspecified", "methanol", "ethanol", "glycerol", "TEOA", "Na2S/Na2SO3"]
 
 def load_current_data():
@@ -128,6 +128,10 @@ def main():
 
     DATA["photo"] = build_photo(p, lib)
     build_overlays(DATA, p)
+    try:
+        DATA["shap"] = json.load(open(os.path.join(DATA_DIR, "shap.json")))
+    except Exception:
+        DATA["shap"] = {}
 
     # honest metrics (electro untouched; photo updated to grouped numbers)
     m = json.load(open(os.path.join(MODELS_DIR, "photo_classifier_metrics.json")))

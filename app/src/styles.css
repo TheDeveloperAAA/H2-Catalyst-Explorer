@@ -107,6 +107,32 @@ body { font-family: var(--font); background: var(--bg); color: var(--ink); overf
 .tooltip3d .tn { font-weight: 600; }
 .tooltip3d .ts { font-size: 11px; color: var(--ink3); }
 
+/* SHAP drivers */
+.drivers { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.driver { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 12.5px; }
+.driver .dn { color: var(--ink2); width: 132px; flex-shrink: 0; }
+.driver .dbar { flex: 1; height: 6px; background: rgba(255,255,255,0.07); border-radius: 999px; overflow: hidden; }
+.driver .dfill { height: 100%; border-radius: 999px; }
+.driver .dd { width: 14px; text-align: center; font-weight: 600; }
+
+/* onboarding actions */
+.ob-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.onboard button.ghost { background: transparent; color: var(--ink2); border: 1px solid var(--line2); }
+.onboard button.ghost:hover { color: var(--ink); border-color: var(--teal); filter: none; }
+
+/* guided tour */
+.tour { position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); width: min(470px, 86vw); padding: 20px 22px; z-index: 30; }
+.tour .tour-step { font-size: 10.5px; font-family: var(--mono); color: var(--teal); letter-spacing: 0.08em; margin-bottom: 6px; }
+.tour h3 { font-family: var(--serif); font-size: 21px; font-weight: 600; margin-bottom: 6px; }
+.tour p { font-size: 14px; color: var(--ink2); line-height: 1.6; }
+.tour-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.tour-actions button { font-family: var(--font); font-size: 13.5px; font-weight: 500; padding: 9px 20px; border-radius: 999px; cursor: pointer; border: none; }
+.tour-actions .skip { background: transparent; color: var(--ink3); }
+.tour-actions .skip:hover { color: var(--ink); }
+.tour-actions .next { background: var(--teal); color: #04211c; }
+.tour-launch { position: absolute; bottom: 24px; right: 24px; z-index: 12; background: var(--panel); backdrop-filter: blur(14px); border: 1px solid var(--line2); color: var(--ink); font-family: var(--font); font-size: 13px; font-weight: 500; padding: 11px 18px; border-radius: 999px; cursor: pointer; }
+.tour-launch:hover { color: var(--teal); border-color: var(--teal); }
+
 @media (max-width: 720px) {
   .metrics .mc:nth-child(n+3) { display: none; }
   .drawer { width: 90vw; }

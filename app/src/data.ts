@@ -32,3 +32,8 @@ export function rateOf(m: any): number {
 export function classColor(cls: string): string {
   return CLASS_COLOR[cls] || CLASS_COLOR.other
 }
+
+export function driversFor(mode: string, key: string): any[] {
+  const block = mode === 'her' ? DATA.shap?.her : DATA.shap?.photo
+  return (block && block[key]) || []
+}
