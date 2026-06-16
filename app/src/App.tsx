@@ -1,0 +1,256 @@
+import { useMemo, useState } from 'react'
+import Scene from './Scene'
+import { useStore } from './store'
+import {
+  DATA, photoEntries, electroEntries, oerEntries,
+  CLASS_LABEL, CLASS_COLOR, classColor, promisingOf, tierOf,
+} from './data'
+
+const M = DATA.metrics
+
+const TIER_COLOR: Record<string, string> = { low: '#f87171', moderate: '#fbbf24', high: '#60a5fa', exceptional: '#2dd4bf' }
+const CONF: Record<string, [string, string]> = {
+  'evidence-backed': ['#34d399', 'Evidence-backed'],
+  'limited-evidence': ['#fbbf24', 'Limited evidence'],
+  'model-estimate': ['#94a3b8', 'Model estimate'],
+}
+function gaugeColor(p: number) { return p >= 0.6 ? '#34d399' : p >= 0.4 ? '#fbbf24' : '#f87171' }
+
+const MODES = [
+  { id: 'universe', label: 'Photocatalysts', ico: '◆', hint: 'x band gap · y promising · z published rate' },
+  { id: 'her', label: 'HER volcano', ico: '▲', hint: 'x H-binding energy · height = suitability · peak near 0 eV is best' },
+  { id: 'oer', label: 'OER volcano', ico: '●', hint: 'x activity descriptor · height = score · centre (1.6 eV) is optimal' },
+]
+
+function TopBar() {
+  return (
+    <div className="topbar">
+      <div className="brand glass">
+        <h1>H<sub>2</sub> Catalyst <em>Explorer</em></h1>
+        <span className="sub">3D</span>
+      </div>
+      <div className="metrics glass">
+        <div className="mc"><div className="mv">{M.electro_R2}</div><div className="mk">HER R2</div></div>
+        <div className="mc"><div className="mv">{M.oer_cv_R2 ?? M.oer_R2 ?? '-'}</div><div className="mk">OER R2</div></div>
+        <div className="mc"><div className="mv">{M.photo_roc_auc}</div><div className="mk">Photo AUC</div></div>
+        <div className="mc"><div className="mv">{photoEntries.length}</div><div className="mk">materials</div></div>
+      </div>
+      <a className="classic glass" href="./classic.html">Classic view {'↗'}</a>
+    </div>
+  )
+}
+
+function Rail() {
+  const mode = useStore((s) => s.mode)
+  const setMode = useStore((s) => s.setMode)
+  return (
+    <div className="rail glass">
+      {MODES.map((m) => (
+        <button key={m.id} className={mode === m.id ? 'on' : ''} onClick={() => setMode(m.id as any)}>
+          <span className="ico">{m.ico}</span>{m.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function entriesFor(mode: string): [string, any][] {
+  return mode === 'her' ? electroEntries : mode === 'oer' ? oerEntries : photoEntries
+}
+
+function Search() {
+  const mode = useStore((s) => s.mode)
+  const select = useStore((s) => s.select)
+  const [q, setQ] = useState('')
+  const list = useMemo(() => {
+    const all = entriesFor(mode)
+    if (!q.trim()) return []
+    const t = q.toLowerCase()
+    return all.filter(([k, m]) => (k + ' ' + (m.class || '')).toLowerCase().includes(t)).slice(0, 8)
+  }, [q, mode])
+  return (
+    <div className="searchwrap">
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search a material (CdS, perovskite, MoS2)..." />
+      {list.length > 0 && (
+        <div className="results glass">
+          {list.map(([k, m]) => (
+            <div className="r" key={k} onClick={() => { select(k); setQ('') }}>
+              <span><span className="dot" style={{ background: mode === 'universe' ? classColor(m.class) : '#2dd4bf' }} />{k}</span>
+              <span style={{ fontSize: 11, color: 'var(--ink3)' }}>{mode === 'universe' ? CLASS_LABEL[m.class] : ''}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Legend() {
+  const mode = useStore((s) => s.mode)
+  if (mode === 'universe') {
+    const used = [...new Set(photoEntries.map(([, m]) => m.class))]
+    return (
+      <div className="legend glass">
+        <div className="lt">Material family</div>
+        {used.map((c) => (
+          <div className="lrow" key={c}><span className="dot" style={{ background: CLASS_COLOR[c] || '#64748b' }} />{CLASS_LABEL[c] || c}</div>
+        ))}
+      </div>
+    )
+  }
+  return (
+    <div className="legend glass">
+      <div className="lt">Activity</div>
+      <div className="lrow"><span className="dot" style={{ background: '#34d399' }} />Strong</div>
+      <div className="lrow"><span className="dot" style={{ background: '#fbbf24' }} />Moderate</div>
+      <div className="lrow"><span className="dot" style={{ background: '#f87171' }} />Weak</div>
+    </div>
+  )
+}
+
+function PhotoDetail({ k, m }: { k: string; m: any }) {
+  const c = m.combos['methanol|true']
+  const prom = c.promising
+  const ev = m.evidence
+  const [cc, clabel] = CONF[m.confidence] || CONF['model-estimate']
+  const levers = m.recommendation?.top_levers || []
+  return (
+    <>
+      <h2>{k}</h2>
+      <div>
+        <span className="tier-pill" style={{ background: (TIER_COLOR[c.tier] || '#888') + '22', color: TIER_COLOR[c.tier] }}>{c.tier} performer</span>
+        <span className="badge" style={{ background: cc + '22', color: cc, marginLeft: 8 }}>{clabel}{ev ? ` · ${ev.n_papers}` : ''}</span>
+      </div>
+      <div className="gaugewrap">
+        <div className="gaugelabel"><span>Worth synthesizing?</span><span className="gaugeval" style={{ color: gaugeColor(prom) }}>{Math.round(prom * 100)}%</span></div>
+        <div className="gauge"><div className="gaugefill" style={{ width: `${prom * 100}%`, background: gaugeColor(prom) }} /></div>
+      </div>
+      <div className="metarow">
+        <div className="meta"><div className="k">Band gap</div><div className="v">{m.band_gap_eV} eV</div></div>
+        <div className="meta"><div className="k">Gap source</div><div className="v">{m.band_gap_source.includes('experimental') ? 'Experimental' : 'Estimated'}</div></div>
+        <div className="meta"><div className="k">Family</div><div className="v">{CLASS_LABEL[m.class] || m.class}</div></div>
+        <div className="meta"><div className="k">Tier conf.</div><div className="v">{Math.round(c.tier_conf * 100)}%</div></div>
+      </div>
+      {ev ? (
+        <div className="ev">
+          <div className="et">Published evidence · {ev.n_papers} studies</div>
+          <div className="er">Typical H2 rate: <b>{Math.round(ev.typical_low)} to {Math.round(ev.typical_high)}</b> umol/h/g (median {Math.round(ev.median_rate)})</div>
+          <small>The real literature spread. The model screens within it, never pretends to one number.</small>
+        </div>
+      ) : (
+        <div className="ev"><div className="et">Published evidence</div><div className="er">No direct corpus data; prediction from composition + experimental band gap.</div></div>
+      )}
+      {levers.length > 0 && (
+        <div className="levers">
+          <div className="meta"><div className="k">What to try next</div></div>
+          {levers.slice(0, 3).map((l: any, i: number) => (
+            <div className="lever" key={i}>
+              <span>{l.change}</span>
+              <span className="d" style={{ color: l.delta > 0.01 ? '#34d399' : '#9fb0c8' }}>{l.delta > 0 ? '+' : ''}{Math.round(l.delta * 100)} pts</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
+function HerDetail({ k, m }: { k: string; m: any }) {
+  const col = m.score >= 70 ? '#34d399' : m.score >= 40 ? '#fbbf24' : '#f87171'
+  return (
+    <>
+      <h2>{k}</h2>
+      <div className="gaugewrap" style={{ marginTop: 14 }}>
+        <div className="gaugelabel"><span>Predicted H-binding energy</span><span className="gaugeval" style={{ color: col }}>{m.energy_eV > 0 ? '+' : ''}{m.energy_eV} eV</span></div>
+        <div className="gauge"><div className="gaugefill" style={{ width: `${m.score}%`, background: col }} /></div>
+      </div>
+      <div style={{ fontSize: 15, color: col, fontWeight: 500, marginTop: 14 }}>{m.verdict}</div>
+      <div className="metarow">
+        <div className="meta"><div className="k">HER score</div><div className="v">{Math.round(m.score)} / 100</div></div>
+        <div className="meta"><div className="k">Reading</div><div className="v">Sabatier volcano</div></div>
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--ink3)', lineHeight: 1.6 }}>A binding energy near 0 eV is ideal. Trained on Catalysis-Hub DFT, grouped R2 = {M.electro_R2}.</div>
+    </>
+  )
+}
+
+function OerDetail({ k, m }: { k: string; m: any }) {
+  const col = m.score >= 70 ? '#34d399' : m.score >= 40 ? '#fbbf24' : '#f87171'
+  return (
+    <>
+      <h2>{k}</h2>
+      <div style={{ fontSize: 15, color: col, fontWeight: 500, marginTop: 10 }}>{m.verdict}</div>
+      <div className="gaugewrap">
+        <div className="gaugelabel"><span>OER activity score</span><span className="gaugeval" style={{ color: col }}>{Math.round(m.score)}/100</span></div>
+        <div className="gauge"><div className="gaugefill" style={{ width: `${m.score}%`, background: col }} /></div>
+      </div>
+      <div className="metarow">
+        <div className="meta"><div className="k">Descriptor dG(O)-dG(OH)</div><div className="v">{m.descriptor} eV</div></div>
+        <div className="meta"><div className="k">Est. overpotential</div><div className="v">{m.overpotential_V} V</div></div>
+        <div className="meta"><div className="k">Family</div><div className="v">{m.class}</div></div>
+        {m.lit_eta_mV != null && <div className="meta"><div className="k">Literature eta</div><div className="v">{m.lit_eta_mV} mV</div></div>}
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--ink3)', lineHeight: 1.6 }}>Trained on Catalysis-Hub O/OH/OOH energies (grouped R2 = {M.oer_cv_R2 ?? M.oer_R2}). Optimal descriptor is ~1.6 eV.</div>
+    </>
+  )
+}
+
+function Drawer() {
+  const mode = useStore((s) => s.mode)
+  const selected = useStore((s) => s.selected)
+  const select = useStore((s) => s.select)
+  if (!selected) return null
+  const map = entriesFor(mode)
+  const found = map.find(([k]) => k === selected)
+  if (!found) return null
+  const m = found[1]
+  return (
+    <div className="drawer glass">
+      <button className="close" onClick={() => select(null)} aria-label="close">{'×'}</button>
+      {mode === 'universe' ? <PhotoDetail k={selected} m={m} /> : mode === 'her' ? <HerDetail k={selected} m={m} /> : <OerDetail k={selected} m={m} />}
+    </div>
+  )
+}
+
+function Onboard() {
+  const onboarded = useStore((s) => s.onboarded)
+  const dismiss = useStore((s) => s.dismissOnboard)
+  if (onboarded) return null
+  return (
+    <div className="onboard">
+      <div className="card glass">
+        <h2>The catalyst <em>universe</em></h2>
+        <p>Every glowing point is a real catalyst. Brighter and higher means more promising for hydrogen. Colors are material families.</p>
+        <div className="steps">
+          <div className="step"><div className="si">{'↻'}</div><div className="st">Drag to rotate</div></div>
+          <div className="step"><div className="si">{'⊕'}</div><div className="st">Scroll to zoom</div></div>
+          <div className="step"><div className="si">{'→'}</div><div className="st">Click a point</div></div>
+        </div>
+        <button onClick={dismiss}>Explore</button>
+      </div>
+    </div>
+  )
+}
+
+function Hint() {
+  const mode = useStore((s) => s.mode)
+  const sel = useStore((s) => s.selected)
+  if (sel) return null
+  const m = MODES.find((x) => x.id === mode)!
+  return <div className="hint">{m.hint}</div>
+}
+
+export default function App() {
+  return (
+    <div className="app">
+      <Scene />
+      <TopBar />
+      <Rail />
+      <Search />
+      <Legend />
+      <Hint />
+      <Drawer />
+      <Onboard />
+    </div>
+  )
+}

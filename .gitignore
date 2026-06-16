@@ -8,3 +8,5 @@ venv/
 .claude/
 data/raw/
 *.lmdb
+app/node_modules/
+app/dist/
