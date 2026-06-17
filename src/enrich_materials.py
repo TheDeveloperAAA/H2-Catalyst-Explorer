@@ -54,20 +54,35 @@ BAND_EDGES_LIT = {
     "Fe2O3 (hematite)": (0.28, 2.38), "BiOCl": (-0.10, 3.30), "Ag2S": (-0.30, 0.70),
 }
 
-def band_edges(formula, eg, name=None):
+# Classes where the Mulliken estimate is known to be unreliable: low-anion-count
+# covalent solids (carbon nitrides, nitrides, carbides) where the geometric-mean
+# electronegativity over-weights the few electronegative anions. e.g. for g-C3N4
+# the estimate lands ~2 V off the real CB; we therefore do NOT assert a
+# water-splitting verdict from an estimated edge in these classes.
+UNRELIABLE_EDGE_CLASSES = {"carbon_nitride", "nitride", "carbon"}
+
+def band_edges(formula, eg, name=None, cls=None):
     if name in BAND_EDGES_LIT:
         cb, vb = BAND_EDGES_LIT[name]
-        return round(cb, 2), round(vb, 2), "literature"
+        # keep the literature CB (the electrochemically meaningful reduction edge)
+        # but make VB consistent with the band gap we actually display, so the
+        # band-edge diagram and the stated gap never disagree on screen.
+        if abs((vb - cb) - eg) > 0.3:
+            vb = cb + eg
+        return round(cb, 2), round(vb, 2), "literature", True
     d = elems(formula)
     if not d or any(e not in CHI for e in d):
-        return None, None, "none"
+        return None, None, "none", False
+    if eg < 0.30:                 # metallic / semimetal: no meaningful band edges
+        return None, None, "none", False
     tot = sum(d.values())
     chi = 1.0
     for e, n in d.items():
         chi *= CHI[e] ** (n / tot)
     cb = chi - EE - 0.5 * eg     # Mulliken estimate, vs NHE pH 0
     vb = cb + eg
-    return round(cb, 2), round(vb, 2), "estimated"
+    reliable = cls not in UNRELIABLE_EDGE_CLASSES
+    return round(cb, 2), round(vb, 2), "estimated", reliable
 
 # AM1.5G absorbable photon fraction vs band gap (interpolated)
 _SOLAR = [(1.0,0.77),(1.5,0.55),(2.0,0.36),(2.4,0.24),(2.7,0.17),(3.0,0.12),(3.2,0.09),(3.6,0.05),(4.0,0.03),(5.0,0.01)]
@@ -136,11 +151,27 @@ def main():
     for _, r in lib.iterrows():
         m = str(r["material"]); eg = float(r["band_gap_eV"]); cls = r["class"]
         gsrc = str(r.get("gap_source", "literature"))
-        cb, vb, esrc = band_edges(m, eg, m)
-        splits = None if esrc == "none" else bool(cb < 0 and vb > 1.23)
+        cb, vb, esrc, edge_ok = band_edges(m, eg, m, cls)
+        # Water-splitting verdict with an overpotential buffer, not the bare
+        # thermodynamic lines. A bare straddle (cb<0, vb>1.23) with only a few mV
+        # of margin vanishes under real kinetics, so we require the CB to clear
+        # the H+/H2 line by >=0.1 V AND the VB to clear the O2/H2O line by >=0.4 V
+        # (a realistic OER overpotential) before calling it "Yes". In between is
+        # "marginal". Edges we don't trust (none / unreliable estimate) get no claim.
+        if esrc == "none" or not edge_ok:
+            verdict, splits, margin = "unknown", None, None
+        else:
+            margin = round(min(0.0 - cb, vb - 1.23), 2)            # worse of the two sides
+            if (cb <= -0.10) and (vb >= 1.63):
+                verdict = "yes"
+            elif margin > 0:
+                verdict = "marginal"
+            else:
+                verdict = "no"
+            splits = (verdict == "yes")                            # bool kept for back-compat
         out[m] = {
-            "cb": cb, "vb": vb, "edge_source": esrc,
-            "splits_water": splits,
+            "cb": cb, "vb": vb, "edge_source": esrc, "edge_reliable": bool(edge_ok),
+            "splits_water": splits, "water_verdict": verdict, "water_margin": margin,
             "solar_abs": solar_abs(eg), "visible": eg < 3.0,
             "gap_source": gsrc,
             **practical(m),

@@ -31,9 +31,9 @@ Every output is labelled by confidence: `trained` model, `evidence-backed`, or `
 |-------|--------|-------|
 | **Electrocatalysis HER** (trained) | **R² = 0.90**, MAE = 0.15 eV | Validated on *unseen materials* (grouped split). Error is near the precision of the underlying DFT calculations. |
 | **Photocatalysis** (screening, trained) | **ROC-AUC = 0.65**, ~60% accuracy | Honest grouped validation (test on materials never seen in training); 4-tier at 0.35 (vs 0.25 random). The earlier 0.72 came from a leaky random split and was corrected. |
-| **Electrocatalysis OER** (trained) | **grouped CV R² = 0.77**, ± 1.81 eV | Trained on Catalysis-Hub O/OH/OOH energies (not OC22). Activity descriptor dG(O*)-dG(OH*); domain-restricted to genuine OER catalysts. Literature overpotential shown as primary for the ~25 well-known ones. |
+| **Electrocatalysis OER** (literature primary + weak model) | **leak-free grouped CV R² = 0.64 ± 0.26** (descriptor band ± 3.4 eV) | Trained on Catalysis-Hub O/OH/OOH energies (not OC22), grouped by composition feature vector so identical-surface decorations cannot leak (an earlier 0.86 was leakage). The descriptor is weak, so the curated literature overpotential is the primary signal; domain-restricted to genuine OER catalysts. |
 
-Full provenance, metrics, intended use, and limits per model are in [docs/MODEL_CARDS.md](docs/MODEL_CARDS.md). All regression predictions carry conformal ± bands and the photo probability is isotonic-calibrated.
+Full provenance, metrics, intended use, and limits per model are in [docs/MODEL_CARDS.md](docs/MODEL_CARDS.md). Every regression prediction carries a conformal ± band whose 90% coverage is **measured on a held-out fold** (HER 0.90, OER 0.88), and the photo probability is isotonic-calibrated out-of-sample. Fonts are self-hosted, so both front-ends are genuinely offline.
 
 **The electrocatalysis model independently rediscovered known chemistry:** with no hints, it ranks MoS₂ as the top HER catalyst, and honestly places Pt mid-pack (its (111) surface binds H slightly too strongly), matching what the field knows. The Litmus tab shows this directly.
 

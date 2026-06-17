@@ -1,10 +1,20 @@
 {
   "target": "OER intermediate reaction energy (eV)",
   "n_rows": 2828,
-  "validation": "GroupShuffleSplit by surface composition (unseen materials)",
-  "R2": 0.86,
-  "MAE_eV": 0.631,
-  "cv_R2_mean": 0.771,
-  "cv_R2_std": 0.024,
+  "validation": "GroupShuffleSplit by composition feature vector (leak-free: identical-composition surface decorations cannot split across folds)",
+  "R2": 0.323,
+  "MAE_eV": 1.669,
+  "cv_R2_mean": 0.638,
+  "cv_R2_std": 0.256,
+  "arm_R2": {
+    "O*": 0.031,
+    "OH*": 0.541,
+    "OOH*": -5.74
+  },
+  "arm_n": {
+    "O*": 646,
+    "OH*": 691,
+    "OOH*": 132
+  },
   "descriptor": "OER activity from dG(O*)-dG(OH*); overpotential = max step - 1.23 V"
 }

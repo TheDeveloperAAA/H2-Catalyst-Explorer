@@ -248,19 +248,23 @@ function PhotoDetail({ k, m }: { k: string; m: any }) {
         {m.cb != null && <div className="sci"><div className="k">Band edges {m.edge_source === 'estimated' ? '(est)' : ''}</div><div className="v">{m.cb} / {m.vb} V</div></div>}
         {(() => {
           const est = m.edge_source === 'estimated'
-          const label = m.splits_water == null ? '?' : m.splits_water ? (est ? 'Likely (est)' : 'Yes') : 'Marginal'
-          const col = m.splits_water == null ? '#9fb0c8' : (m.splits_water && !est) ? '#57d39b' : '#efc169'
-          return <div className="sci"><div className="k">Splits water{est ? ' *' : ''}</div><div className="v" style={{ color: col }}>{label}</div></div>
+          const v = m.water_verdict || (m.splits_water == null ? 'unknown' : m.splits_water ? 'yes' : 'marginal')
+          const base: any = { yes: ['Yes', '#57d39b'], marginal: ['Marginal', '#efc169'], no: ['No', '#9fb0c8'], unknown: ['?', '#9fb0c8'] }
+          let [label, col] = base[v]
+          if (v === 'yes' && est) { label = 'Likely (est)'; col = '#efc169' }
+          const star = est && (v === 'yes' || v === 'marginal')
+          return <div className="sci"><div className="k">Splits water{star ? ' *' : ''}</div><div className="v" style={{ color: col }}>{label}</div></div>
         })()}
       </div>
-      {m.edge_source === 'estimated' && m.cb != null && <div style={{ fontSize: 11, color: 'var(--ink3)', marginBottom: 8 }}>* Band edges are a Mulliken electronegativity estimate (E_CB = χ − 4.5 − ½Eg), not measured, so the water-splitting verdict is indicative, not confirmed.</div>}
+      {m.water_verdict === 'marginal' && m.cb != null && <div style={{ fontSize: 11, color: 'var(--ink3)', marginBottom: 8 }}>Marginal: the band edges straddle the water redox levels but the valence band clears the O₂/H₂O line by less than a realistic OER overpotential (~0.4 V), so unassisted overall splitting is unlikely without a co-catalyst.</div>}
+      {m.edge_source === 'estimated' && m.cb != null && (m.water_verdict === 'yes' || m.water_verdict === 'marginal') && <div style={{ fontSize: 11, color: 'var(--ink3)', marginBottom: 8 }}>* Band edges are a Mulliken electronegativity estimate (E_CB = χ − 4.5 − ½Eg), not measured, so this verdict is indicative, not confirmed.</div>}
       <div className="pbadges">
         <span className="pb" style={costStyle(m.cost)}>{m.cost === 'precious' ? 'Precious' : m.cost === 'moderate' ? 'Moderate cost' : 'Low cost'}</span>
         <span className="pb" style={m.abundant ? GOOD : NEU}>{m.abundant ? 'Earth-abundant' : 'Less abundant'}</span>
         <span className="pb" style={m.toxic ? BAD : GOOD}>{m.toxic ? 'Toxic element' : 'Non-toxic'}</span>
       </div>
       {m.stability && <div className="stab"><b>Stability.</b> {m.stability}</div>}
-      <div style={{ fontSize: 11.5, color: 'var(--ink3)', fontStyle: 'italic', marginBottom: 12 }}>Composition-level screen. The % is a {DATA.uncertainty?.calib_cv_folds ? `${DATA.uncertainty.calib_cv_folds}-fold ` : ''}calibrated probability, so it means what it says, but calibration fixes the meaning, not the separating power (grouped ROC-AUC stays ~{M.photo_roc_auc ?? M.roc_auc ?? '0.65'}). It cannot see morphology, facet, or surface area, which strongly affect real rates. Cost, toxicity, stability and solar use are heuristic estimates.</div>
+      <div style={{ fontSize: 11.5, color: 'var(--ink3)', fontStyle: 'italic', marginBottom: 12 }}>Composition-level screen. The % is an {DATA.uncertainty?.calib_out_of_sample ? 'out-of-sample ' : ''}calibrated probability{DATA.uncertainty?.calib_n ? ` (fit on ${DATA.uncertainty.calib_n} held-out rows the model never saw)` : ''}, so it means what it says, but calibration fixes the meaning, not the separating power (grouped ROC-AUC stays ~{M.photo_roc_auc ?? M.roc_auc ?? '0.65'}). It cannot see morphology, facet, or surface area, which strongly affect real rates. Cost, toxicity, stability and solar use are heuristic estimates.</div>
       {ev ? (
         <div className="ev">
           <div className="et">Published evidence · {ev.n_papers} studies</div>
@@ -311,19 +315,26 @@ function HerDetail({ k, m }: { k: string; m: any }) {
         <div className="meta"><div className="k">Reading</div><div className="v">Sabatier volcano</div></div>
       </div>
       <div style={{ fontSize: 12.5, color: 'var(--ink3)', lineHeight: 1.6 }}>A binding energy near 0 eV is ideal. Trained on Catalysis-Hub bimetallic-alloy DFT (grouped R2 = {M.electro_R2}, conformal ±{pm} eV).{m.in_domain === false ? ' This composition is outside that alloy chemistry, so treat the value as a rough extrapolation.' : ''}</div>
+      <div style={{ fontSize: 11, color: 'var(--ink3)', fontStyle: 'italic', marginTop: 6, lineHeight: 1.5 }}>Composition-level: the model does not resolve facet or adsorption site, so it gives one value per composition. The target is the DFT H* binding energy (ΔE), not the entropy/zero-point-corrected free energy (ΔG ≈ ΔE + 0.24 eV), so the volcano is read on the same ΔE scale the model was trained on.</div>
       <Drivers mode="her" k={k} />
     </>
   )
 }
 
 function OerDetail({ k, m }: { k: string; m: any }) {
-  const col = m.score >= 70 ? '#57d39b' : m.score >= 40 ? '#efc169' : '#ef8d8d'
   const descPm = DATA.uncertainty?.oer_desc_pm
   const known = m.lit_eta_mV != null
+  // Literature is PRIMARY when known; the trained descriptor is a weak, leak-free
+  // cross-check (grouped CV R2 ~0.64 +/- 0.26, O*/OOH* arms near zero), so colour
+  // from the literature eta when we have it, not from the model score.
+  const col = known ? (m.lit_eta_mV <= 300 ? '#57d39b' : m.lit_eta_mV <= 360 ? '#efc169' : '#ef8d8d')
+                    : (m.score >= 70 ? '#57d39b' : m.score >= 40 ? '#efc169' : '#ef8d8d')
+  const cvStd = M.oer_cv_R2_std
+  const arm = M.oer_arm_R2 || {}
   return (
     <>
       <h2>{k}</h2>
-      <div style={{ fontSize: 15, color: col, fontWeight: 500, marginTop: 10 }}>{m.verdict}</div>
+      <div style={{ fontSize: 15, color: col, fontWeight: 500, marginTop: 10 }}>{m.verdict_primary || m.verdict}</div>
       {known ? (
         <div className="gaugewrap">
           <div className="gaugelabel"><span>Overpotential (literature, lower is better)</span><span className="gaugeval" style={{ color: col }}>{m.lit_eta_mV} mV</span></div>
@@ -336,17 +347,24 @@ function OerDetail({ k, m }: { k: string; m: any }) {
         </div>
       )}
       <div className="metarow">
+        {known && <div className="meta"><div className="k">Literature eta (@10 mA/cm²)</div><div className="v">{m.lit_eta_mV} mV</div></div>}
         <div className="meta"><div className="k">Descriptor dG(O)-dG(OH)</div><div className="v">{m.descriptor}{descPm ? ` ± ${descPm}` : ''} eV</div></div>
-        <div className="meta"><div className="k">{known ? 'Model score' : 'Activity score'}</div><div className="v">{Math.round(m.score)}/100</div></div>
+        <div className="meta"><div className="k">Model score (weak)</div><div className="v">{Math.round(m.score)}/100</div></div>
         <div className="meta"><div className="k">Family</div><div className="v">{m.class}</div></div>
-        {known && <div className="meta"><div className="k">Literature eta</div><div className="v">{m.lit_eta_mV} mV</div></div>}
       </div>
       <div className="pbadges">
         {known
-          ? <span className="pb" style={{ background: 'rgba(148,163,184,0.15)', color: '#9fb0c8' }}>Literature value (representative) + model cross-check</span>
-          : <span className="pb" style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24' }}>Model-only estimate, lower confidence</span>}
+          ? <span className="pb" style={{ background: 'rgba(148,163,184,0.15)', color: '#9fb0c8' }}>Literature-anchored (representative η, not individually cited)</span>
+          : <span className="pb" style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24' }}>Model-only estimate, low confidence</span>}
       </div>
-      <div style={{ fontSize: 12.5, color: 'var(--ink3)', lineHeight: 1.6 }}>Trained on Catalysis-Hub O/OH/OOH energies (grouped CV R2 = {M.oer_cv_R2 ?? M.oer_R2}). The descriptor band is wide (±{descPm} eV, propagated from the energy residuals), so use it for ranking, not absolute activity. Literature overpotentials are representative values, not individually cited. Only genuine OER catalysts are listed.</div>
+      {known && m.model_disagrees && (
+        <div style={{ fontSize: 12, color: '#efc169', background: 'rgba(239,193,105,0.10)', borderRadius: 8, padding: '8px 10px', margin: '10px 0', lineHeight: 1.55 }}>
+          The trained descriptor disagrees with the literature here (it reads "{m.verdict}"). The metal/alloy-heavy training set underrates noble and known oxide catalysts, so the literature overpotential above is authoritative and the model is shown only for transparency.
+        </div>
+      )}
+      <div style={{ fontSize: 12.5, color: 'var(--ink3)', lineHeight: 1.6 }}>
+        The OER descriptor comes from a trained model that is honestly <b>weak</b> once leakage is removed: leak-free grouped-CV R2 = {M.oer_cv_R2}{cvStd ? ` ± ${cvStd}` : ''}, and the O*/OOH* arms barely predict (R2 {arm['O*'] ?? '?'} / {arm['OOH*'] ?? '?'}). An earlier 0.86 was inflated by identical-composition surfaces leaking across the split. The descriptor band is ±{descPm} eV, so treat it as a rough ranking only. Where a literature overpotential exists it is the primary signal.
+      </div>
     </>
   )
 }

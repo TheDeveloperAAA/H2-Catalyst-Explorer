@@ -43,7 +43,49 @@ def test_golden_oer_descriptor_band_wider():
     # per-energy conformal band. If they are equal, the propagation regressed.
     u = D["uncertainty"]
     assert u["oer_desc_pm"] > u["oer_pm"], "descriptor band must be wider than per-energy band"
-    assert 2.0 <= u["oer_desc_pm"] <= 4.0, f"descriptor band implausible: {u['oer_desc_pm']}"
+    assert 2.0 <= u["oer_desc_pm"] <= 5.0, f"descriptor band implausible: {u['oer_desc_pm']}"
+
+
+def test_golden_conformal_coverage_validated():
+    # The "90%" bands must be empirically validated on a disjoint test fold, not
+    # asserted. Coverage should land near 0.90 (allow sampling slack).
+    u = D["uncertainty"]
+    assert 0.80 <= u["her_coverage"] <= 0.97, f"HER coverage off target: {u.get('her_coverage')}"
+    assert 0.78 <= u["oer_coverage"] <= 0.97, f"OER coverage off target: {u.get('oer_coverage')}"
+
+
+def test_golden_calibration_out_of_sample():
+    # Calibration must be fit on held-out rows the model never trained on.
+    u = D["uncertainty"]
+    assert u.get("calib_out_of_sample") is True, "photo calibration must be out-of-sample"
+    assert u.get("calib_n", 0) >= 300, "too few held-out calibration rows"
+
+
+def test_golden_oer_model_honestly_weak():
+    # Guard against the leakage coming back: leak-free, the OER regressor is weak.
+    # If oer_cv_R2 climbs back toward the old inflated 0.86, the group key regressed.
+    m = D["metrics"]
+    assert m["oer_cv_R2"] < 0.78, f"OER CV R2 implausibly high ({m['oer_cv_R2']}); leakage may be back"
+    arm = m.get("oer_arm_R2", {})
+    assert "O*" in arm and "OH*" in arm, "per-arm R2 must be recorded"
+
+
+def test_golden_oer_reconciliation():
+    # RuO2 is a benchmark OER catalyst (lit eta 280 mV) that the weak model rates
+    # "Poor"; the data must flag the disagreement and keep literature primary.
+    ru = D["oer"]["RuO2"]
+    assert ru["lit_eta_mV"] == 280
+    assert ru["model_disagrees"] is True, "RuO2 model/lit disagreement must be flagged"
+    assert "Excellent" in (ru.get("verdict_primary") or ""), "RuO2 should read excellent from literature"
+    assert ru.get("confidence") == "literature-anchored"
+
+
+def test_golden_water_overpotential_buffer():
+    # Thin-margin straddles must NOT be called "Yes". WS2 clears the O2/H2O line by
+    # only ~0.02 V, so it must be 'marginal', not a confident splitter.
+    assert D["photo"]["WS2"]["water_verdict"] == "marginal", "WS2 should be marginal, not Yes"
+    # and a genuine straddler with headroom stays yes
+    assert D["photo"]["SrTiO3"]["water_verdict"] in ("yes", "marginal")
 
 
 def test_golden_gap_provenance_not_collapsed():

@@ -1,6 +1,11 @@
-xgboost>=2.0
-scikit-learn>=1.3
-matminer>=0.9
-pymatgen>=2024.1
-pandas>=2.0
-numpy>=1.24
+# Engine dependencies, pinned for reproducibility (the dashboard itself needs none;
+# it is a static site). These are the exact versions the committed models and
+# data/dashboard_data.json were generated with. Pinning matters because a silent
+# featurizer change (matminer/pymatgen) would move the golden-test values.
+xgboost==3.2.0
+scikit-learn==1.9.0
+matminer==0.10.1
+pymatgen==2026.5.4
+pandas==2.3.3
+numpy==2.4.6
+scipy==1.17.1

@@ -20,7 +20,11 @@ see which applies.
 - **Intended use.** Rank metal/alloy surfaces for HER suitability.
 - **Limits.** Trained on one high-throughput alloy study; non-alloy chemistries
   (oxides, sulfides such as MoS2) are flagged `extrapolated` and are out of domain.
-  Vacuum/implicit DFT, electrolyte-blind.
+  Vacuum/implicit DFT, electrolyte-blind. **Composition-level:** the features are
+  compositional, so the model does not resolve facet or adsorption site (it returns
+  one value per composition; the "(111)" framing is nominal). The target is the DFT
+  H* binding energy (dE), not the zero-point/entropy-corrected free energy
+  (dG ~ dE + 0.24 eV); the volcano is read on that same dE scale.
 - **License.** Data CC-BY 4.0. Model: this repo.
 
 ## Model B : Photocatalysis screen
@@ -36,8 +40,9 @@ see which applies.
   conditions.
 - **Validation.** GroupShuffleSplit by material (unseen-catalyst test).
 - **Performance.** Binary ROC-AUC 0.65, accuracy 0.60; 4-tier accuracy 0.35
-  (random 0.25). Probability isotonic-calibrated, averaged over a 3-fold grouped
-  cross-validation (not a single split), so the curve is stable.
+  (random 0.25). Probability isotonic-calibrated **out-of-sample**: the isotonic map
+  is fit only on the ~1,010 held-out rows the booster never trained on, so the
+  calibration is honest rather than in-sample optimistic.
 - **Calibration is not accuracy.** Calibration only makes the displayed % mean what
   it says (of materials shown ~30%, about 30% really are promising). It does NOT
   improve the model's ability to separate good from bad: the grouped ROC-AUC stays
@@ -60,24 +65,35 @@ see which applies.
 - **Training data.** Catalysis-Hub O/OH/OOH reactions (CC-BY), 2,828 rows / 1,016
   surfaces. Note: a sampled pull (page-capped); OOH* is thin (n=203).
 - **Features.** Magpie + facet + adsorbate.
-- **Validation.** GroupShuffleSplit by surface composition.
-- **Performance.** Grouped CV R2 0.77 (held-out 0.86); OH* arm R2 0.91, OOH* arm
-  R2 0.44. Per-energy conformal 90% interval ± 1.81 eV.
-- **Descriptor uncertainty is larger than per-energy.** The activity descriptor is a
-  *difference* of two predicted energies, dG(O*) - dG(OH*), so its band is wider than
-  the ± 1.81 eV per-energy band. Measured directly from paired O*/OH* residuals it is
-  ± 2.77 eV (90%). The descriptor is therefore reliable for **ranking**, not for an
-  absolute overpotential. The UI shows this ± 2.77 eV band on the descriptor.
+- **Validation.** GroupShuffleSplit / GroupKFold by the **composition feature vector**,
+  NOT the raw surface string. This is a correctness fix: the surface strings carry
+  hundreds of decorations (`IrO2-rutile`, `Cr-doped-IrO2`, `IrO2-O-cov`...) that
+  collapse to one Magpie vector, so grouping by the string let identical feature
+  rows fall in both train and test. 1,025 surface strings reduce to 632 distinct
+  feature vectors; grouping by the vector is leak-free.
+- **Performance (honest, leak-free).** Grouped-CV R2 = **0.64 ± 0.26** (single held-out
+  split 0.32; the spread is large because skill varies sharply by composition family).
+  Per-arm held-out R2: OH* 0.54, O* 0.03, OOH* strongly negative. **An earlier R2 0.86
+  was almost entirely leakage** from the string grouping above. Per-energy conformal
+  90% interval ± 1.26 eV, with **measured coverage 0.88** on a disjoint test fold.
+- **This model is deliberately treated as WEAK.** Because the O* and OOH* arms barely
+  predict on unseen compositions, the trained descriptor is a low-confidence
+  cross-check, not the primary signal. The UI leads with the curated literature
+  overpotential wherever one exists and flags any case where the model verdict
+  disagrees with it.
+- **Descriptor uncertainty is larger than per-energy.** The descriptor dG(O*) - dG(OH*)
+  is a *difference* of two predicted energies, so its band exceeds the per-energy band.
+  Pooled over five grouped folds (91 surfaces) it is **± 3.4 eV (90%)** - wide enough
+  that the descriptor is for rough ranking only, never an absolute overpotential.
 - **Confidence split.** Of the 45 OER catalysts shown, 25 carry a literature
-  overpotential (anchored, cross-checked by the model) and 20 are **model-only**
-  (no literature anchor) and are flagged lower-confidence in the UI.
-- **Intended use.** Rank genuine OER catalysts by the activity descriptor.
+  overpotential (representative, @10 mA/cm2, primary signal) and 20 are **model-only**
+  (no literature anchor), flagged lower-confidence in the UI.
+- **Intended use.** Rank genuine OER catalysts, led by literature overpotential; the
+  descriptor adds a weak directional cross-check.
 - **Limits.** Applicability domain restricted to redox-transition-metal oxides /
   perovskites / pyrochlores; main-group oxides (ZnO, Ag3PO4) are excluded. The
-  metal/alloy-heavy training set underrates noble oxides (RuO2, IrO2), so for the
-  ~25 well-known catalysts the **literature overpotential is shown as primary** and
-  the model as a cross-check. Absolute overpotential from the descriptor is an
-  estimate (ranking only).
+  metal/alloy-heavy training set underrates noble oxides (RuO2, IrO2), which is
+  exactly why literature is primary and the model is shown only for transparency.
 - **License.** Data CC-BY 4.0. Model: this repo.
 
 ## Curated / heuristic overlays (NOT trained)
@@ -119,3 +135,9 @@ Zhuo-Brgoch, matched by reduced formula), 1 reconciled. The exact live counts ar
   react-three-fiber). This is a deliberate trade: the tool stays a zero-server static
   site that "opens in any browser, no setup", at the cost of a larger first load. The
   lightweight `classic.html` remains available for low-bandwidth use.
+- **Fully offline (verified).** Fonts (Fraunces, Spline Sans, Inter) are self-hosted
+  as ~175 KB of variable woff2 under `fonts/`; the previous Google-Fonts `@import` was
+  removed, so neither front-end makes any network request. `deploy.sh` asserts no
+  `googleapis`/`gstatic` reference survives in either front-end or the built bundle,
+  and that `classic.html`'s inlined DATA deep-equals `dashboard_data.json` (so the two
+  front-ends cannot drift in numbers or honesty framing).

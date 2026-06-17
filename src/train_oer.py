@@ -47,7 +47,14 @@ ohf = OneHotEncoder(handle_unknown="ignore", sparse_output=True); fac = ohf.fit_
 oha = OneHotEncoder(handle_unknown="ignore", sparse_output=True); ads = oha.fit_transform(df[["adsorbate"]].astype(str))
 X = hstack([csr_matrix(F.values), fac, ads]).tocsr()
 y = df.reaction_energy_eV.values
-groups = df.surface_composition.astype(str).values
+# LEAK-FREE grouping: group by the actual composition FEATURE VECTOR, not the raw
+# surface_composition string. The string has hundreds of decorations (rutile,
+# Cr-doped, O-cov, columbite...) that collapse to ONE magpie vector, so grouping
+# by the string let identical feature rows fall in both train and test (inflating
+# R2 from a true ~0.70 to 0.86). Rows the model literally cannot tell apart must
+# stay in the same fold.
+groups = pd.util.hash_pandas_object(F.round(3), index=False).astype(str).values
+print(f"groups: {df.surface_composition.nunique():,} surface strings -> {len(set(groups)):,} distinct feature vectors")
 
 PARAMS = dict(n_estimators=700, max_depth=6, learning_rate=0.03, subsample=0.85,
               colsample_bytree=0.85, reg_lambda=1.5, n_jobs=4, random_state=42)
@@ -65,21 +72,26 @@ model = XGBRegressor(**PARAMS); model.fit(X[tr], y[tr])
 pred = model.predict(X[te])
 r2 = r2_score(y[te], pred); mae = mean_absolute_error(y[te], pred)
 print(f"held-out grouped: R2={r2:.3f}  MAE={mae:.3f} eV")
-# per-adsorbate
+# per-adsorbate (recorded, not just printed: the descriptor uses O*/OH*, and the
+# headline R2 is dominated by the easy OH* arm, so the split must be inspectable)
 te_ads = df.iloc[te].adsorbate.values
+arm_R2, arm_n = {}, {}
 for a in ["O*","OH*","OOH*"]:
     mask = te_ads == a
     if mask.sum() > 5:
-        print(f"  {a:<5} R2={r2_score(y[te][mask], pred[mask]):.3f}  MAE={mean_absolute_error(y[te][mask], pred[mask]):.3f} eV")
+        ar2 = r2_score(y[te][mask], pred[mask])
+        arm_R2[a] = round(float(ar2), 3); arm_n[a] = int(mask.sum())
+        print(f"  {a:<5} R2={ar2:.3f}  MAE={mean_absolute_error(y[te][mask], pred[mask]):.3f} eV  (n={int(mask.sum())})")
 
 model.get_booster().save_model(os.path.join(MODELS_DIR, "model_oer.json"))
 with open(os.path.join(MODELS_DIR, "encoders_oer.pkl"), "wb") as f:
     pickle.dump({"ohe_facet": ohf, "ohe_ads": oha, "magpie_labels": L,
                  "magpie_means": F.mean().to_dict()}, f)
 metrics = {"target": "OER intermediate reaction energy (eV)", "n_rows": int(len(df)),
-           "validation": "GroupShuffleSplit by surface composition (unseen materials)",
+           "validation": "GroupShuffleSplit by composition feature vector (leak-free: identical-composition surface decorations cannot split across folds)",
            "R2": round(float(r2), 3), "MAE_eV": round(float(mae), 3),
            "cv_R2_mean": round(float(np.mean(cvr2)), 3), "cv_R2_std": round(float(np.std(cvr2)), 3),
+           "arm_R2": arm_R2, "arm_n": arm_n,
            "descriptor": "OER activity from dG(O*)-dG(OH*); overpotential = max step - 1.23 V"}
 with open(os.path.join(MODELS_DIR, "oer_metrics.json"), "w") as f:
     json.dump(metrics, f, indent=2)

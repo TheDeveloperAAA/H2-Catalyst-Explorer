@@ -39,11 +39,28 @@ rm -rf assets
 cp app/dist/index.html index.html
 cp -R app/dist/assets assets
 
-echo "==> 4/5  Verify (golden + data integrity, both front-ends present)"
+echo "==> 4/5  Verify (golden + data integrity + dual-front-end consistency)"
 "$PY" tests/test_data_integrity.py
 "$PY" tests/test_golden.py
 test -f index.html && test -d assets && test -f classic.html || { echo "front-end artifacts missing" >&2; exit 1; }
 grep -q 'const DATA' classic.html || { echo "classic.html DATA block missing" >&2; exit 1; }
+# the two front-ends must not drift: classic.html's inlined DATA must deep-equal the
+# JSON source of truth, classic must carry the honesty framing, and NEITHER may make
+# an external network request (the offline claim).
+"$PY" - <<'PYV'
+import json, re, sys
+data = json.load(open("data/dashboard_data.json"))
+html = open("classic.html", encoding="utf-8").read()
+m = re.search(r"^const DATA = (.*);\s*$", html, re.M)
+assert m, "classic.html DATA line not found"
+assert json.loads(m.group(1)) == data, "classic.html DATA has drifted from dashboard_data.json"
+for s in ["Marginal", "leak-free", "representative", "out-of-sample", "literature primary"]:
+    assert s in html, f"classic.html missing honesty string: {s!r}"
+for bad in ["fonts.googleapis.com", "fonts.gstatic.com"]:
+    assert bad not in html, f"classic.html still references {bad} (breaks offline)"
+print("dual-front-end consistency + offline checks passed")
+PYV
+grep -rq "googleapis\|gstatic" assets/ && { echo "built bundle references external fonts (breaks offline)" >&2; exit 1; } || true
 
 echo "==> 5/5  Commit"
 git add -A

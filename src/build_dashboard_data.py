@@ -87,11 +87,24 @@ def build_overlays(DATA, p, enrich):
         r = p.predict_oer(m, "110")
         if r is None:
             continue
+        lit = info["lit_eta_mV"]
+        # Reconcile the trained descriptor against the curated literature eta. The
+        # metal/alloy-heavy training set underrates noble/known oxides, so where a
+        # literature eta exists it is PRIMARY and the model is a cross-check. Flag
+        # the (common) case where the model verdict openly disagrees so the UI can
+        # lead with the literature value instead of a misleading "Poor".
+        lit_verdict = co.oer_verdict(lit) if lit else None
+        lit_good = (lit is not None and lit <= 340)
+        model_good = (r["oer_score"] >= 55)
+        disagrees = bool(lit is not None and (lit_good != model_good))
         DATA["oer"][m] = {"descriptor": r["oer_descriptor_eV"], "score": r["oer_score"],
                           "overpotential_V": r["overpotential_V"], "verdict": r["verdict"],
                           "dG_O": r["dG_O_eV"], "dG_OH": r["dG_OH_eV"], "dG_OOH": r["dG_OOH_eV"],
-                          "lit_eta_mV": info["lit_eta_mV"], "electrolyte": info["electrolyte"],
-                          "class": info["class"]}
+                          "lit_eta_mV": lit, "lit_verdict": lit_verdict,
+                          "verdict_primary": lit_verdict if lit else r["verdict"],
+                          "model_disagrees": disagrees,
+                          "confidence": "literature-anchored" if lit else "model-only",
+                          "electrolyte": info["electrolyte"], "class": info["class"]}
     DATA["electrolyte_notes"] = {s: {"acidic": co.her_electrolyte_note(s, "acidic"),
                                      "alkaline": co.her_electrolyte_note(s, "alkaline")}
                                  for s in DATA["electro"]}
@@ -162,7 +175,10 @@ def main():
                 rec["top_levers"] = sorted(rec["top_levers"], key=lambda x: -x["delta"])[:3]
         DATA["uncertainty"] = {"her_pm": unc["her_pm"], "oer_pm": unc["oer_pm"],
                                "oer_desc_pm": unc.get("oer_desc_pm"),
-                               "photo_calibrated": True, "calib_cv_folds": unc["photo_calib"].get("cv_folds", 1)}
+                               "her_coverage": unc.get("her_coverage"), "oer_coverage": unc.get("oer_coverage"),
+                               "photo_calibrated": True,
+                               "calib_out_of_sample": unc["photo_calib"].get("out_of_sample", False),
+                               "calib_n": unc["photo_calib"].get("n_calib")}
     except Exception:
         pass
 
@@ -184,7 +200,9 @@ def main():
         om = json.load(open(os.path.join(MODELS_DIR, "oer_metrics.json")))
         DATA["metrics"]["oer_R2"] = om["R2"]
         DATA["metrics"]["oer_cv_R2"] = om["cv_R2_mean"]
+        DATA["metrics"]["oer_cv_R2_std"] = om.get("cv_R2_std")
         DATA["metrics"]["oer_n"] = om["n_rows"]
+        DATA["metrics"]["oer_arm_R2"] = om.get("arm_R2", {})
     except Exception:
         pass
 
@@ -204,8 +222,7 @@ def main():
 
     # write JSON source of truth + inline into index.html
     payload = json.dumps(DATA, ensure_ascii=False)
-    if "-" in payload:                            # never emit an em dash
-        payload = payload.replace("-", "-")
+    assert "—" not in payload, "em dash leaked into the dashboard payload"
     with open(os.path.join(DATA_DIR, "dashboard_data.json"), "w") as f:
         f.write(payload)
 
