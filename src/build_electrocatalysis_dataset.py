@@ -23,8 +23,8 @@ TARGET DEFINITION:
   predict reaction energy per adsorbate family.
 
 OUTPUT
-  /mnt/user-data/outputs/electrocatalysis_clean.csv
-  /mnt/user-data/outputs/electrocatalysis_quality_report.txt
+  data//electrocatalysis_clean.csv
+  data//electrocatalysis_quality_report.txt
 """
 
 import os
@@ -36,8 +36,9 @@ import pandas as pd
 import numpy as np
 
 ENDPOINT = "https://api.catalysis-hub.org/graphql"
-OUT_CSV = "/mnt/user-data/outputs/electrocatalysis_clean.csv"
-OUT_REPORT = "/mnt/user-data/outputs/electrocatalysis_quality_report.txt"
+from paths import DATA_DIR
+OUT_CSV = os.path.join(DATA_DIR, "electrocatalysis_clean.csv")
+OUT_REPORT = os.path.join(DATA_DIR, "electrocatalysis_quality_report.txt")
 
 # Publications to pull. MamunHighT2019 is the large high-throughput bimetallic
 # alloy study (the backbone of the IIT-Madras HER/OER reference set).
@@ -201,7 +202,7 @@ if len(oer):
     log(f"  OER  energy mean +/- std (eV) ..... "
         f"{oer.reaction_energy_eV.mean():.3f} +/- {oer.reaction_energy_eV.std():.3f}")
 
-os.makedirs("/mnt/user-data/outputs", exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
 clean.to_csv(OUT_CSV, index=False)
 with open(OUT_REPORT, "w") as f:
     f.write("\n".join(report))

@@ -38,17 +38,36 @@ def elems(formula):
     except Exception:
         return {}
 
-def band_edges(formula, eg):
+# Literature CB / VB band edges (V vs NHE, pH 0) for well-studied photocatalysts.
+# Sources: standard photocatalysis / photoelectrochemistry literature.
+BAND_EDGES_LIT = {
+    "TiO2": (-0.29, 2.91), "TiO2 (rutile)": (-0.10, 2.90), "ZnO": (-0.31, 2.99),
+    "CdS": (-0.52, 1.88), "ZnS": (-1.04, 2.56), "WO3": (0.37, 3.07), "Fe2O3": (0.28, 2.38),
+    "g-C3N4": (-1.13, 1.57), "BiVO4": (0.02, 2.42), "Cu2O": (-1.00, 1.00), "CuO": (0.46, 2.16),
+    "SnO2": (0.00, 3.60), "In2O3": (-0.62, 2.28), "SrTiO3": (-0.80, 2.40), "BaTiO3": (-0.80, 2.40),
+    "Bi2WO6": (0.30, 3.00), "Bi2MoO6": (0.32, 2.98), "CdSe": (-0.60, 1.14), "MoS2": (-0.13, 1.67),
+    "ZnIn2S4": (-0.86, 1.44), "Ag3PO4": (0.45, 2.90), "Ta3N5": (-0.75, 1.35), "CeO2": (-0.40, 2.80),
+    "NaTaO3": (-1.06, 2.94), "KTaO3": (-0.90, 2.70), "Nb2O5": (-0.20, 3.20), "Ta2O5": (-0.60, 3.30),
+    "ZrO2": (-1.00, 4.00), "Ga2O3": (-1.40, 3.40), "In2S3": (-0.90, 1.10), "Bi2S3": (0.10, 1.40),
+    "SnS2": (-0.50, 1.70), "NiO": (-0.50, 3.00), "Co3O4": (0.50, 2.57), "V2O5": (0.50, 2.80),
+    "Bi2O3": (0.32, 3.12), "WS2": (-0.10, 1.25), "MoSe2": (-0.20, 1.30), "Zn0.5Cd0.5S": (-0.70, 1.70),
+    "Fe2O3 (hematite)": (0.28, 2.38), "BiOCl": (-0.10, 3.30), "Ag2S": (-0.30, 0.70),
+}
+
+def band_edges(formula, eg, name=None):
+    if name in BAND_EDGES_LIT:
+        cb, vb = BAND_EDGES_LIT[name]
+        return round(cb, 2), round(vb, 2), "literature"
     d = elems(formula)
     if not d or any(e not in CHI for e in d):
-        return None, None
+        return None, None, "none"
     tot = sum(d.values())
     chi = 1.0
     for e, n in d.items():
         chi *= CHI[e] ** (n / tot)
-    cb = chi - EE - 0.5 * eg     # vs NHE, pH 0
+    cb = chi - EE - 0.5 * eg     # Mulliken estimate, vs NHE pH 0
     vb = cb + eg
-    return round(cb, 2), round(vb, 2)
+    return round(cb, 2), round(vb, 2), "estimated"
 
 # AM1.5G absorbable photon fraction vs band gap (interpolated)
 _SOLAR = [(1.0,0.77),(1.5,0.55),(2.0,0.36),(2.4,0.24),(2.7,0.17),(3.0,0.12),(3.2,0.09),(3.6,0.05),(4.0,0.03),(5.0,0.01)]
@@ -87,6 +106,14 @@ STAB = {
  "mxene": "Oxidises in air and water over time.",
 }
 
+# OER applicability domain: a genuine OER catalyst needs a redox-active transition
+# metal in an oxide-type framework. Main-group oxides (ZnO, Ag3PO4, CdO) are NOT.
+OER_REDOX = {"Ni", "Co", "Fe", "Mn", "Ir", "Ru", "Rh", "Cu", "V", "Cr", "Mo", "W"}
+OER_CLASSES = {"oxide", "perovskite", "pyrochlore", "layered"}
+def oer_in_domain(formula, cls):
+    es = set(elems(formula).keys())
+    return bool(cls in OER_CLASSES and (es & OER_REDOX))
+
 def doi_link(s):
     s = str(s)
     if s.startswith("10."):
@@ -108,38 +135,25 @@ def main():
     out = {}
     for _, r in lib.iterrows():
         m = str(r["material"]); eg = float(r["band_gap_eV"]); cls = r["class"]
-        cb, vb = band_edges(m, eg)
-        splits = (cb is not None and cb < 0 and vb > 1.23)
+        gsrc = str(r.get("gap_source", "literature"))
+        cb, vb, esrc = band_edges(m, eg, m)
+        splits = None if esrc == "none" else bool(cb < 0 and vb > 1.23)
         out[m] = {
-            "cb": cb, "vb": vb, "splits_water": bool(splits),
+            "cb": cb, "vb": vb, "edge_source": esrc,
+            "splits_water": splits,
             "solar_abs": solar_abs(eg), "visible": eg < 3.0,
+            "gap_source": gsrc,
             **practical(m),
             "stability": STAB.get(cls, "Stability varies."),
+            "oer_domain": oer_in_domain(m, cls),
             "papers": cites.get(m, []),
         }
 
-    # leaderboards
-    DATA = json.load(open(os.path.join(DATA_DIR, "dashboard_data.json")))
-    def prom(v): return v["combos"]["methanol|true"]["promising"]
-    photo_lb = sorted([(k, v) for k, v in DATA["photo"].items() if v.get("evidence")],
-                      key=lambda kv: -prom(kv[1]))[:10]
-    visible_lb = sorted([(k, v) for k, v in DATA["photo"].items() if v["band_gap_eV"] < 3.0 and v.get("evidence")],
-                        key=lambda kv: -prom(kv[1]))[:10]
-    her_lb = sorted(DATA["electro"].items(), key=lambda kv: -kv[1]["score"])[:10]
-    oer_lb = sorted(DATA["oer"].items(), key=lambda kv: -kv[1]["score"])[:10]
-    leaderboards = {
-        "photo": [{"name": k, "value": f"{round(prom(v)*100)}% promising"} for k, v in photo_lb],
-        "visible": [{"name": k, "value": f"{round(prom(v)*100)}% · {v['band_gap_eV']} eV"} for k, v in visible_lb],
-        "her": [{"name": k, "value": f"{round(v['score'])}/100 · {v['energy_eV']} eV"} for k, v in her_lb],
-        "oer": [{"name": k, "value": f"{round(v['score'])}/100"} for k, v in oer_lb],
-    }
-
-    json.dump({"materials": out, "leaderboards": leaderboards},
-              open(os.path.join(DATA_DIR, "enrich.json"), "w"))
+    json.dump({"materials": out}, open(os.path.join(DATA_DIR, "enrich.json"), "w"))
     nbe = sum(1 for v in out.values() if v["cb"] is not None)
-    print(f"enriched {len(out)} materials | band edges for {nbe} | citations for {len(cites)}")
+    ndom = sum(1 for v in out.values() if v["oer_domain"])
+    print(f"enriched {len(out)} materials | band edges for {nbe} | OER-in-domain {ndom} | citations {len(cites)}")
     print("sample TiO2:", out.get("TiO2"))
-    print("leaderboard photo top3:", [x['name'] for x in leaderboards['photo'][:3]])
 
 if __name__ == "__main__":
     main()

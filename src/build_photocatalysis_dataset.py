@@ -20,8 +20,8 @@ WHAT THIS DOES
   8. De-duplicates and writes a clean CSV + a data-quality report.
 
 OUTPUT
-  /mnt/user-data/outputs/photocatalysis_clean.csv
-  /mnt/user-data/outputs/photocatalysis_quality_report.txt
+  data//photocatalysis_clean.csv
+  data//photocatalysis_quality_report.txt
 ================================================================================
 """
 
@@ -35,9 +35,10 @@ import numpy as np
 # --------------------------------------------------------------------------- #
 #  Paths
 # --------------------------------------------------------------------------- #
-CSV_ROOT = "/home/claude/photocat/extracted/Photocatalyst Extracted Data/csv_version"
-OUT_CSV = "/mnt/user-data/outputs/photocatalysis_clean.csv"
-OUT_REPORT = "/mnt/user-data/outputs/photocatalysis_quality_report.txt"
+from paths import DATA_DIR, RAW_DIR
+CSV_ROOT = os.environ.get("PHOTOCAT_CSV_ROOT", os.path.join(RAW_DIR, "photocat", "csv_version"))
+OUT_CSV = os.path.join(DATA_DIR, "photocatalysis_clean.csv")
+OUT_REPORT = os.path.join(DATA_DIR, "photocatalysis_quality_report.txt")
 
 report_lines = []
 def log(msg):
@@ -274,7 +275,7 @@ if len(model_ready):
 # --------------------------------------------------------------------------- #
 #  Write outputs
 # --------------------------------------------------------------------------- #
-os.makedirs("/mnt/user-data/outputs", exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
 clean.to_csv(OUT_CSV, index=False)
 with open(OUT_REPORT, "w") as f:
     f.write("\n".join(report_lines))

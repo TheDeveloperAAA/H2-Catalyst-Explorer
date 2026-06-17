@@ -20,6 +20,7 @@ index.html is rewritten in place.
 """
 import os, re, json, warnings
 warnings.filterwarnings("ignore")
+import numpy as np
 import pandas as pd
 import h2_predictor as hp
 import chem_knowledge as ck
@@ -69,15 +70,17 @@ def build_photo(p, lib):
         }
     return photo
 
-def build_overlays(DATA, p):
-    """Trained OER + curated overlays (electrolyte, defects) + litmus benchmark."""
-    # OER: TRAINED model predictions; keep curated literature overpotential as a cross-check
+def build_overlays(DATA, p, enrich):
+    """Trained OER (domain-restricted) + curated overlays + litmus benchmark."""
+    # OER domain: only genuine OER catalysts. Curated set + redox-transition-metal
+    # oxides. Main-group oxides (ZnO, Ag3PO4, CdO, SnO2, ...) are excluded because
+    # they are not OER catalysts, which removes the descriptor false positives.
     oer_mats = {}
     for m, v in co.OER_CATALYSTS.items():
         oer_mats[m] = {"lit_eta_mV": v["eta_mV"], "electrolyte": v["electrolyte"], "class": v["class"]}
     for m in DATA["photo"]:
         cls = DATA["photo"][m].get("class")
-        if cls in ("oxide", "perovskite", "pyrochlore") and m not in oer_mats:
+        if m not in oer_mats and enrich.get(m, {}).get("oer_domain"):
             oer_mats[m] = {"lit_eta_mV": None, "electrolyte": "alkaline", "class": cls}
     DATA["oer"] = {}
     for m, info in oer_mats.items():
@@ -127,19 +130,46 @@ def main():
     lib = lib.sort_values(["n_papers", "material"], ascending=[False, True])
 
     DATA["photo"] = build_photo(p, lib)
-    build_overlays(DATA, p)
+    enrich = {}
+    try:
+        enrich = json.load(open(os.path.join(DATA_DIR, "enrich.json"))).get("materials", {})
+    except Exception:
+        pass
+    build_overlays(DATA, p, enrich)
+    for m, ex in enrich.items():
+        if m in DATA["photo"]:
+            DATA["photo"][m].update(ex)
     try:
         DATA["shap"] = json.load(open(os.path.join(DATA_DIR, "shap.json")))
     except Exception:
         DATA["shap"] = {}
+
+    # photo probability calibration (isotonic) + conformal uncertainty bands
+    DATA["uncertainty"] = {}
     try:
-        en = json.load(open(os.path.join(DATA_DIR, "enrich.json")))
-        for m, ex in en.get("materials", {}).items():
-            if m in DATA["photo"]:
-                DATA["photo"][m].update(ex)
-        DATA["leaderboards"] = en.get("leaderboards", {})
+        unc = json.load(open(os.path.join(DATA_DIR, "uncertainty.json")))
+        cx, cy = unc["photo_calib"]["x"], unc["photo_calib"]["y"]
+        cal = lambda pp: round(float(np.interp(pp, cx, cy)), 2)
+        for mm in DATA["photo"].values():
+            for c in mm["combos"].values():
+                c["promising"] = cal(c["promising"])
+            rec = mm.get("recommendation")
+            if rec:
+                rec["baseline_probability"] = cal(rec["baseline_probability"])
+                for lev in rec.get("top_levers", []):
+                    lev["new_probability"] = cal(lev["new_probability"])
+                    lev["delta"] = round(lev["new_probability"] - rec["baseline_probability"], 2)
+                rec["top_levers"] = sorted(rec["top_levers"], key=lambda x: -x["delta"])[:3]
+        DATA["uncertainty"] = {"her_pm": unc["her_pm"], "oer_pm": unc["oer_pm"], "photo_calibrated": True}
     except Exception:
-        DATA["leaderboards"] = {}
+        pass
+
+    # HER applicability domain (Mamun training set = pure metals / alloys, no nonmetals)
+    NONMETAL = {"S", "Se", "Te", "O", "N", "C", "P", "B", "H", "Cl", "F", "I", "Br"}
+    def her_domain(s):
+        return not (set(re.findall(r"[A-Z][a-z]?", str(s))) & NONMETAL)
+    for mm in DATA["electro"]:
+        DATA["electro"][mm]["in_domain"] = her_domain(mm)
 
     # honest metrics (electro untouched; photo updated to grouped numbers)
     m = json.load(open(os.path.join(MODELS_DIR, "photo_classifier_metrics.json")))
@@ -155,6 +185,20 @@ def main():
         DATA["metrics"]["oer_n"] = om["n_rows"]
     except Exception:
         pass
+
+    # domain-correct leaderboards (OER ranked by literature overpotential, not the
+    # descriptor score, so only genuine OER catalysts appear)
+    pf = lambda v: v["combos"]["methanol|true"]["promising"]
+    photo_lb = sorted([(k, v) for k, v in DATA["photo"].items() if v.get("evidence")], key=lambda kv: -pf(kv[1]))[:10]
+    vis_lb = sorted([(k, v) for k, v in DATA["photo"].items() if v["band_gap_eV"] < 3.0 and v.get("evidence")], key=lambda kv: -pf(kv[1]))[:10]
+    her_lb = sorted(DATA["electro"].items(), key=lambda kv: -kv[1]["score"])[:10]
+    oer_lb = sorted([x for x in DATA["oer"].items() if x[1].get("lit_eta_mV")], key=lambda kv: kv[1]["lit_eta_mV"])[:10]
+    DATA["leaderboards"] = {
+        "photo": [{"name": k, "value": f"{round(pf(v)*100)}% promising"} for k, v in photo_lb],
+        "visible": [{"name": k, "value": f"{round(pf(v)*100)}% · {v['band_gap_eV']} eV"} for k, v in vis_lb],
+        "her": [{"name": k, "value": f"{round(v['score'])}/100 · {v['energy_eV']} eV"} for k, v in her_lb],
+        "oer": [{"name": k, "value": f"{v['lit_eta_mV']} mV (lit.)"} for k, v in oer_lb],
+    }
 
     # write JSON source of truth + inline into index.html
     payload = json.dumps(DATA, ensure_ascii=False)

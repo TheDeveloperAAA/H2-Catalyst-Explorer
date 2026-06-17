@@ -17,7 +17,7 @@ CAN support reliably:
 This is the screening question a PhD student actually has: "is this material +
 condition worth synthesizing?" The model answers that with ROC-AUC ~0.73.
 
-OUTPUTS (to /mnt/user-data/outputs/models/)
+OUTPUTS (to models/)
   model_photo_tier.json      (4-class booster)
   model_photo_binary.json    (promising-vs-not booster)
   encoders_photo_clf.pkl     (encoders + tier thresholds + evidence table)
@@ -36,7 +36,7 @@ from pymatgen.core import Composition
 from matminer.featurizers.composition import ElementProperty
 import chem_knowledge as ck
 
-OUT = "/mnt/user-data/outputs/models"
+from paths import DATA_DIR, MODELS_DIR as OUT
 os.makedirs(OUT, exist_ok=True)
 EP = ElementProperty.from_preset("magpie"); L = EP.feature_labels()
 def mg(f):
@@ -45,7 +45,7 @@ def mg(f):
 
 print("="*70); print("PHOTOCATALYSIS SCREENING MODEL (classification framing)"); print("="*70)
 
-pc = pd.read_csv("/mnt/user-data/outputs/photocatalysis_clean.csv")
+pc = pd.read_csv(os.path.join(DATA_DIR, "photocatalysis_clean.csv"))
 mr = pc[(pc.activity_basis=="umol_h-1_g-1")&(pc.activity_value>0)&(pc.activity_value<1e7)].copy()
 mr["material"] = mr["photocatalyst"].apply(ck.canonicalize_name)
 mr = mr[mr["material"].notna()].reset_index(drop=True)

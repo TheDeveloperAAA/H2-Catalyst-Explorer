@@ -244,8 +244,8 @@ function PhotoDetail({ k, m }: { k: string; m: any }) {
       </div>
       <div className="scirow">
         <div className="sci"><div className="k">Solar use</div><div className="v">{Math.round((m.solar_abs || 0) * 100)}%{m.visible ? '' : ' UV'}</div></div>
-        {m.cb != null && <div className="sci"><div className="k">Band edges</div><div className="v">{m.cb} / {m.vb} V</div></div>}
-        <div className="sci"><div className="k">Splits water</div><div className="v" style={{ color: m.splits_water ? '#34d399' : '#fbbf24' }}>{m.splits_water ? 'Yes' : 'Marginal'}</div></div>
+        {m.cb != null && <div className="sci"><div className="k">Band edges {m.edge_source === 'estimated' ? '(est)' : ''}</div><div className="v">{m.cb} / {m.vb} V</div></div>}
+        <div className="sci"><div className="k">Splits water</div><div className="v" style={{ color: m.splits_water ? '#57d39b' : '#efc169' }}>{m.splits_water == null ? '?' : m.splits_water ? 'Yes' : 'Marginal'}</div></div>
       </div>
       <div className="pbadges">
         <span className="pb" style={costStyle(m.cost)}>{m.cost === 'precious' ? 'Precious' : m.cost === 'moderate' ? 'Moderate cost' : 'Low cost'}</span>
@@ -253,6 +253,7 @@ function PhotoDetail({ k, m }: { k: string; m: any }) {
         <span className="pb" style={m.toxic ? BAD : GOOD}>{m.toxic ? 'Toxic element' : 'Non-toxic'}</span>
       </div>
       {m.stability && <div className="stab"><b>Stability.</b> {m.stability}</div>}
+      <div style={{ fontSize: 11.5, color: 'var(--ink3)', fontStyle: 'italic', marginBottom: 12 }}>Composition-level screen, probability calibrated. It cannot see morphology, facet, or surface area, which strongly affect real rates. Cost, toxicity, stability and solar use are heuristic estimates.</div>
       {ev ? (
         <div className="ev">
           <div className="et">Published evidence · {ev.n_papers} studies</div>
@@ -287,12 +288,14 @@ function PhotoDetail({ k, m }: { k: string; m: any }) {
 }
 
 function HerDetail({ k, m }: { k: string; m: any }) {
-  const col = m.score >= 70 ? '#34d399' : m.score >= 40 ? '#fbbf24' : '#f87171'
+  const col = m.score >= 70 ? '#57d39b' : m.score >= 40 ? '#efc169' : '#ef8d8d'
+  const pm = DATA.uncertainty?.her_pm
   return (
     <>
       <h2>{k}</h2>
-      <div className="gaugewrap" style={{ marginTop: 14 }}>
-        <div className="gaugelabel"><span>Predicted H-binding energy</span><span className="gaugeval" style={{ color: col }}>{m.energy_eV > 0 ? '+' : ''}{m.energy_eV} eV</span></div>
+      {m.in_domain === false && <div className="pbadges" style={{ marginTop: 8 }}><span className="pb" style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24' }}>Extrapolated: outside the alloy training set</span></div>}
+      <div className="gaugewrap" style={{ marginTop: 12 }}>
+        <div className="gaugelabel"><span>Predicted H-binding energy</span><span className="gaugeval" style={{ color: col }}>{m.energy_eV > 0 ? '+' : ''}{m.energy_eV}{pm ? ` ± ${pm}` : ''} eV</span></div>
         <div className="gauge"><div className="gaugefill" style={{ width: `${m.score}%`, background: col }} /></div>
       </div>
       <div style={{ fontSize: 15, color: col, fontWeight: 500, marginTop: 14 }}>{m.verdict}</div>
@@ -300,29 +303,39 @@ function HerDetail({ k, m }: { k: string; m: any }) {
         <div className="meta"><div className="k">HER score</div><div className="v">{Math.round(m.score)} / 100</div></div>
         <div className="meta"><div className="k">Reading</div><div className="v">Sabatier volcano</div></div>
       </div>
-      <div style={{ fontSize: 13, color: 'var(--ink3)', lineHeight: 1.6 }}>A binding energy near 0 eV is ideal. Trained on Catalysis-Hub DFT, grouped R2 = {M.electro_R2}.</div>
+      <div style={{ fontSize: 12.5, color: 'var(--ink3)', lineHeight: 1.6 }}>A binding energy near 0 eV is ideal. Trained on Catalysis-Hub bimetallic-alloy DFT (grouped R2 = {M.electro_R2}, conformal ±{pm} eV).{m.in_domain === false ? ' This composition is outside that alloy chemistry, so treat the value as a rough extrapolation.' : ''}</div>
       <Drivers mode="her" k={k} />
     </>
   )
 }
 
 function OerDetail({ k, m }: { k: string; m: any }) {
-  const col = m.score >= 70 ? '#34d399' : m.score >= 40 ? '#fbbf24' : '#f87171'
+  const col = m.score >= 70 ? '#57d39b' : m.score >= 40 ? '#efc169' : '#ef8d8d'
+  const pm = DATA.uncertainty?.oer_pm
+  const known = m.lit_eta_mV != null
   return (
     <>
       <h2>{k}</h2>
       <div style={{ fontSize: 15, color: col, fontWeight: 500, marginTop: 10 }}>{m.verdict}</div>
-      <div className="gaugewrap">
-        <div className="gaugelabel"><span>OER activity score</span><span className="gaugeval" style={{ color: col }}>{Math.round(m.score)}/100</span></div>
-        <div className="gauge"><div className="gaugefill" style={{ width: `${m.score}%`, background: col }} /></div>
-      </div>
+      {known ? (
+        <div className="gaugewrap">
+          <div className="gaugelabel"><span>Overpotential (literature, lower is better)</span><span className="gaugeval" style={{ color: col }}>{m.lit_eta_mV} mV</span></div>
+          <div className="gauge"><div className="gaugefill" style={{ width: `${Math.max(8, 100 - (m.lit_eta_mV - 230) / 3)}%`, background: col }} /></div>
+        </div>
+      ) : (
+        <div className="gaugewrap">
+          <div className="gaugelabel"><span>Activity descriptor (optimum ~1.6 eV)</span><span className="gaugeval" style={{ color: col }}>{m.descriptor} eV</span></div>
+          <div className="gauge"><div className="gaugefill" style={{ width: `${m.score}%`, background: col }} /></div>
+        </div>
+      )}
       <div className="metarow">
-        <div className="meta"><div className="k">Descriptor dG(O)-dG(OH)</div><div className="v">{m.descriptor} eV</div></div>
-        <div className="meta"><div className="k">Est. overpotential</div><div className="v">{m.overpotential_V} V</div></div>
+        <div className="meta"><div className="k">Descriptor dG(O)-dG(OH)</div><div className="v">{m.descriptor}{pm ? ` ± ${pm}` : ''} eV</div></div>
+        <div className="meta"><div className="k">{known ? 'Model score' : 'Activity score'}</div><div className="v">{Math.round(m.score)}/100</div></div>
         <div className="meta"><div className="k">Family</div><div className="v">{m.class}</div></div>
-        {m.lit_eta_mV != null && <div className="meta"><div className="k">Literature eta</div><div className="v">{m.lit_eta_mV} mV</div></div>}
+        {known && <div className="meta"><div className="k">Literature eta</div><div className="v">{m.lit_eta_mV} mV</div></div>}
       </div>
-      <div style={{ fontSize: 13, color: 'var(--ink3)', lineHeight: 1.6 }}>Trained on Catalysis-Hub O/OH/OOH energies (grouped R2 = {M.oer_cv_R2 ?? M.oer_R2}). Optimal descriptor is ~1.6 eV.</div>
+      <div className="pbadges"><span className="pb" style={{ background: 'rgba(148,163,184,0.15)', color: '#9fb0c8' }}>{known ? 'Literature value + model cross-check' : 'Trained descriptor, ranking only'}</span></div>
+      <div style={{ fontSize: 12.5, color: 'var(--ink3)', lineHeight: 1.6 }}>Trained on Catalysis-Hub O/OH/OOH energies (grouped CV R2 = {M.oer_cv_R2 ?? M.oer_R2}, conformal ±{pm} eV). The descriptor and ranking are robust; an absolute overpotential from the descriptor is only an estimate, so the literature value is shown where known. Only genuine OER catalysts are listed.</div>
     </>
   )
 }

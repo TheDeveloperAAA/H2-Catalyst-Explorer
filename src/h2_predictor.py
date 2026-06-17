@@ -28,7 +28,8 @@ from pymatgen.core import Composition
 from matminer.featurizers.composition import ElementProperty
 import chem_knowledge as ck
 
-MODELS = os.environ.get("H2_MODEL_DIR", "/mnt/user-data/outputs/models")
+MODELS = os.environ.get("H2_MODEL_DIR",
+                        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models"))
 _EP = ElementProperty.from_preset("magpie")
 _L = _EP.feature_labels()
 

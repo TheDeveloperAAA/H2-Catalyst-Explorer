@@ -20,7 +20,7 @@ KEY ENGINEERING DECISIONS (the things that make it trustworthy)
   * Both  : log/robust targets, grouped validation, honest metrics, and a
             saved feature pipeline so new predictions are reproducible.
 
-OUTPUTS (to /mnt/user-data/outputs/models/)
+OUTPUTS (to models/)
   model_electro.json, model_photo.json        (XGBoost boosters)
   encoders_electro.pkl, encoders_photo.pkl     (fitted encoders + columns)
   training_metrics.json                         (honest performance audit)
@@ -42,7 +42,7 @@ from matminer.featurizers.composition import ElementProperty
 
 import chem_knowledge as ck
 
-OUT = "/mnt/user-data/outputs/models"
+from paths import DATA_DIR, MODELS_DIR as OUT
 os.makedirs(OUT, exist_ok=True)
 metrics = {}
 
@@ -64,7 +64,7 @@ print("=" * 70)
 #  MODEL A : ELECTROCATALYSIS  (H* reaction energy, eV)
 # ====================================================================== #
 print("\n[MODEL A] Electrocatalysis -- HER (H* adsorption energy)")
-ea = pd.read_csv("/mnt/user-data/outputs/electrocatalysis_clean.csv")
+ea = pd.read_csv(os.path.join(DATA_DIR, "electrocatalysis_clean.csv"))
 
 # Clean HER signal: H*-only reactions (the canonical HER descriptor)
 her = ea[ea["adsorbate"] == "H*"].copy()
@@ -130,7 +130,7 @@ print("  Top compositional drivers:", ", ".join(f for f, _ in top_e[:4]))
 #  MODEL B : PHOTOCATALYSIS  (log10 H2 rate, umol/h/g)
 # ====================================================================== #
 print("\n[MODEL B] Photocatalysis -- H2 evolution rate (band-gap enriched)")
-pc = pd.read_csv("/mnt/user-data/outputs/photocatalysis_clean.csv")
+pc = pd.read_csv(os.path.join(DATA_DIR, "photocatalysis_clean.csv"))
 mr = pc[(pc.activity_basis == "umol_h-1_g-1") &
         (pc.activity_value > 0) & (pc.activity_value < 1e7)].copy()
 
