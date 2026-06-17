@@ -10,6 +10,10 @@ def test_engine():
     p = hp.H2Predictor()
     her = p.predict_electro("Pt", "111")
     assert her["predicted_H_energy_eV"] is not None
+    # GOLDEN: live engine (not the cached JSON) must still bind Pt H* near -0.46 eV.
+    # This is what catches a silently-bad retrain that data tests cannot see.
+    assert -0.65 <= her["predicted_H_energy_eV"] <= -0.25, \
+        f"Pt dG_H drifted to {her['predicted_H_energy_eV']}"
     oer = p.predict_oer("Co3O4", "110")
     assert oer is not None and "oer_descriptor_eV" in oer
     photo = p.predict_photo("CdS", scavenger="methanol")

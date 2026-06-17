@@ -160,7 +160,9 @@ def main():
                     lev["new_probability"] = cal(lev["new_probability"])
                     lev["delta"] = round(lev["new_probability"] - rec["baseline_probability"], 2)
                 rec["top_levers"] = sorted(rec["top_levers"], key=lambda x: -x["delta"])[:3]
-        DATA["uncertainty"] = {"her_pm": unc["her_pm"], "oer_pm": unc["oer_pm"], "photo_calibrated": True}
+        DATA["uncertainty"] = {"her_pm": unc["her_pm"], "oer_pm": unc["oer_pm"],
+                               "oer_desc_pm": unc.get("oer_desc_pm"),
+                               "photo_calibrated": True, "calib_cv_folds": unc["photo_calib"].get("cv_folds", 1)}
     except Exception:
         pass
 

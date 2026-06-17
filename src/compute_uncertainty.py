@@ -15,7 +15,7 @@ warnings.filterwarnings("ignore")
 import numpy as np, pandas as pd
 import xgboost as xgb
 from scipy.sparse import hstack, csr_matrix
-from sklearn.model_selection import GroupShuffleSplit
+from sklearn.model_selection import GroupShuffleSplit, GroupKFold
 from sklearn.isotonic import IsotonicRegression
 from sklearn.preprocessing import OneHotEncoder
 from pymatgen.core import Composition
@@ -54,7 +54,16 @@ tr, te = next(GroupShuffleSplit(1, test_size=0.2, random_state=1).split(X, y, g)
 from xgboost import XGBRegressor
 m = XGBRegressor(n_estimators=700, max_depth=6, learning_rate=0.03, subsample=0.85, colsample_bytree=0.85, reg_lambda=1.5, n_jobs=4, random_state=42)
 m.fit(X[tr], y[tr])
-out["oer_pm"] = round(float(np.quantile(np.abs(y[te] - m.predict(X[te])), 0.90)), 2)
+pred = m.predict(X[te])
+out["oer_pm"] = round(float(np.quantile(np.abs(y[te] - pred), 0.90)), 2)
+# descriptor band: residual of (O* - OH*) on test surfaces having BOTH adsorbates
+td = oer.iloc[te].copy(); td["pred"] = pred
+dres = []
+for _, gg in td.groupby("surface_composition"):
+    o = gg[gg.adsorbate == "O*"]; oh = gg[gg.adsorbate == "OH*"]
+    if len(o) and len(oh):
+        dres.append(abs((o.reaction_energy_eV.mean() - oh.reaction_energy_eV.mean()) - (o.pred.mean() - oh.pred.mean())))
+out["oer_desc_pm"] = round(float(np.quantile(dres, 0.90)), 2) if len(dres) >= 20 else round(out["oer_pm"] * 2 ** 0.5, 2)
 
 # ---- Photo isotonic calibration on a grouped hold-out ----
 with open(os.path.join(MODELS_DIR, "encoders_photo_clf.pkl"), "rb") as f:
@@ -75,14 +84,17 @@ Xp = hstack([csr_matrix(Fp.values), csr_matrix(N.values), se, ce]).tocsr()
 q = df.activity_value.quantile([.25, .5, .75]).values
 yb = (df.activity_value >= q[1]).astype(int).values
 gp = df.material.values
-tri, tei = next(GroupShuffleSplit(1, test_size=0.25, random_state=3).split(Xp, yb, gp))
 mb = xgb.Booster(); mb.load_model(os.path.join(MODELS_DIR, "model_photo_binary.json"))
-raw_te = mb.predict(xgb.DMatrix(Xp[tei]))
-iso = IsotonicRegression(out_of_bounds="clip", y_min=0.02, y_max=0.98).fit(raw_te, yb[tei])
-xs = np.linspace(0, 1, 21)
-out["photo_calib"] = {"x": [round(float(v), 3) for v in xs], "y": [round(float(v), 3) for v in iso.predict(xs)]}
+# cross-validated isotonic calibration: fit per grouped fold, average the curve
+xs = np.linspace(0, 1, 21); ys_folds = []
+for _, tei in GroupKFold(n_splits=3).split(Xp, yb, gp):
+    raw = mb.predict(xgb.DMatrix(Xp[tei]))
+    iso = IsotonicRegression(out_of_bounds="clip", y_min=0.02, y_max=0.98).fit(raw, yb[tei])
+    ys_folds.append(iso.predict(xs))
+ys = np.mean(ys_folds, axis=0)
+out["photo_calib"] = {"x": [round(float(v), 3) for v in xs], "y": [round(float(v), 3) for v in ys], "cv_folds": 3}
 
 json.dump(out, open(os.path.join(DATA_DIR, "uncertainty.json"), "w"))
-print("HER +/-", out["her_pm"], "eV | OER +/-", out["oer_pm"], "eV")
+print("HER +/-", out["her_pm"], "eV | OER energy +/-", out["oer_pm"], "eV | OER descriptor +/-", out["oer_desc_pm"], "eV")
 print("photo calibration sample (raw -> cal):", list(zip(out["photo_calib"]["x"][::5], out["photo_calib"]["y"][::5])))
 print("wrote", os.path.join(DATA_DIR, "uncertainty.json"))

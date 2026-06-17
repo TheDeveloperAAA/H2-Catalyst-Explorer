@@ -1,0 +1,31 @@
+name: ML smoke (scheduled)
+
+# The data-integrity + golden tests run on every push against the precomputed JSON.
+# This job is heavier: it installs the real ML stack and loads the COMMITTED model
+# files, then drives the engine on anchor materials. It catches drift that the JSON
+# tests cannot, e.g. a model file that no longer matches its cached predictions, or
+# a dependency bump that quietly changes the featurizer. Runs weekly + on demand.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # Mondays 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  engine-golden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install engine dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install --no-cache-dir numpy pandas scipy scikit-learn xgboost matminer pymatgen
+      - name: Engine golden-value smoke (loads committed models)
+        env:
+          OMP_NUM_THREADS: '1'
+        run: python tests/test_engine_smoke.py
+      - name: Re-assert data golden values
+        run: python tests/test_golden.py

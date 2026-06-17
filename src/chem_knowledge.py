@@ -164,6 +164,14 @@ def experimental_gap(canonical_name):
 # Existing hand-curated values keep precedence; the library adds the rest.
 # --------------------------------------------------------------------------- #
 MATERIAL_CLASS = {}
+# Snapshot the GENUINELY hand-curated keys BEFORE merging the library CSV, so the
+# library builder can tell true provenance apart (and not relabel its own
+# literature values as "curated" on the next run). This breaks the feedback loop.
+_ORIGINAL_GAP_KEYS = set(EXPERIMENTAL_BANDGAP.keys())
+def is_original_curated(name):
+    """True only for the hand-curated band gaps, not the ones loaded from the CSV."""
+    return name in _ORIGINAL_GAP_KEYS
+
 def _load_curated_library():
     import os, csv
     here = os.path.dirname(os.path.abspath(__file__))

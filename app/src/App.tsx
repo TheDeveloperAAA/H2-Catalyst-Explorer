@@ -51,7 +51,7 @@ function Drivers({ mode, k }: { mode: string; k: string }) {
   const max = Math.max(...d.map((x: any) => Math.abs(x.impact)))
   return (
     <div className="drivers">
-      <div className="meta"><div className="k">Why this score (SHAP)</div></div>
+      <div className="meta"><div className="k">Why this score (SHAP direction)</div></div>
       {d.map((x: any, i: number) => (
         <div className="driver" key={i}>
           <span className="dn">{x.feature}</span>
@@ -59,6 +59,7 @@ function Drivers({ mode, k }: { mode: string; k: string }) {
           <span className="dd" style={{ color: x.dir === 'up' ? '#34d399' : '#f87171' }}>{x.dir === 'up' ? '↑' : '↓'}</span>
         </div>
       ))}
+      <small style={{ display: 'block', color: 'var(--ink3)', fontSize: 10.5, marginTop: 6, lineHeight: 1.5 }}>SHAP explains the raw model. The displayed % is a monotonic calibration of that score, so the up/down direction of each driver carries over, but the magnitudes are pre-calibration.</small>
     </div>
   )
 }
@@ -245,15 +246,21 @@ function PhotoDetail({ k, m }: { k: string; m: any }) {
       <div className="scirow">
         <div className="sci"><div className="k">Solar use</div><div className="v">{Math.round((m.solar_abs || 0) * 100)}%{m.visible ? '' : ' UV'}</div></div>
         {m.cb != null && <div className="sci"><div className="k">Band edges {m.edge_source === 'estimated' ? '(est)' : ''}</div><div className="v">{m.cb} / {m.vb} V</div></div>}
-        <div className="sci"><div className="k">Splits water</div><div className="v" style={{ color: m.splits_water ? '#57d39b' : '#efc169' }}>{m.splits_water == null ? '?' : m.splits_water ? 'Yes' : 'Marginal'}</div></div>
+        {(() => {
+          const est = m.edge_source === 'estimated'
+          const label = m.splits_water == null ? '?' : m.splits_water ? (est ? 'Likely (est)' : 'Yes') : 'Marginal'
+          const col = m.splits_water == null ? '#9fb0c8' : (m.splits_water && !est) ? '#57d39b' : '#efc169'
+          return <div className="sci"><div className="k">Splits water{est ? ' *' : ''}</div><div className="v" style={{ color: col }}>{label}</div></div>
+        })()}
       </div>
+      {m.edge_source === 'estimated' && m.cb != null && <div style={{ fontSize: 11, color: 'var(--ink3)', marginBottom: 8 }}>* Band edges are a Mulliken electronegativity estimate (E_CB = χ − 4.5 − ½Eg), not measured, so the water-splitting verdict is indicative, not confirmed.</div>}
       <div className="pbadges">
         <span className="pb" style={costStyle(m.cost)}>{m.cost === 'precious' ? 'Precious' : m.cost === 'moderate' ? 'Moderate cost' : 'Low cost'}</span>
         <span className="pb" style={m.abundant ? GOOD : NEU}>{m.abundant ? 'Earth-abundant' : 'Less abundant'}</span>
         <span className="pb" style={m.toxic ? BAD : GOOD}>{m.toxic ? 'Toxic element' : 'Non-toxic'}</span>
       </div>
       {m.stability && <div className="stab"><b>Stability.</b> {m.stability}</div>}
-      <div style={{ fontSize: 11.5, color: 'var(--ink3)', fontStyle: 'italic', marginBottom: 12 }}>Composition-level screen, probability calibrated. It cannot see morphology, facet, or surface area, which strongly affect real rates. Cost, toxicity, stability and solar use are heuristic estimates.</div>
+      <div style={{ fontSize: 11.5, color: 'var(--ink3)', fontStyle: 'italic', marginBottom: 12 }}>Composition-level screen. The % is a {DATA.uncertainty?.calib_cv_folds ? `${DATA.uncertainty.calib_cv_folds}-fold ` : ''}calibrated probability, so it means what it says, but calibration fixes the meaning, not the separating power (grouped ROC-AUC stays ~{M.photo_roc_auc ?? M.roc_auc ?? '0.65'}). It cannot see morphology, facet, or surface area, which strongly affect real rates. Cost, toxicity, stability and solar use are heuristic estimates.</div>
       {ev ? (
         <div className="ev">
           <div className="et">Published evidence · {ev.n_papers} studies</div>
@@ -311,7 +318,7 @@ function HerDetail({ k, m }: { k: string; m: any }) {
 
 function OerDetail({ k, m }: { k: string; m: any }) {
   const col = m.score >= 70 ? '#57d39b' : m.score >= 40 ? '#efc169' : '#ef8d8d'
-  const pm = DATA.uncertainty?.oer_pm
+  const descPm = DATA.uncertainty?.oer_desc_pm
   const known = m.lit_eta_mV != null
   return (
     <>
@@ -329,13 +336,17 @@ function OerDetail({ k, m }: { k: string; m: any }) {
         </div>
       )}
       <div className="metarow">
-        <div className="meta"><div className="k">Descriptor dG(O)-dG(OH)</div><div className="v">{m.descriptor}{pm ? ` ± ${pm}` : ''} eV</div></div>
+        <div className="meta"><div className="k">Descriptor dG(O)-dG(OH)</div><div className="v">{m.descriptor}{descPm ? ` ± ${descPm}` : ''} eV</div></div>
         <div className="meta"><div className="k">{known ? 'Model score' : 'Activity score'}</div><div className="v">{Math.round(m.score)}/100</div></div>
         <div className="meta"><div className="k">Family</div><div className="v">{m.class}</div></div>
         {known && <div className="meta"><div className="k">Literature eta</div><div className="v">{m.lit_eta_mV} mV</div></div>}
       </div>
-      <div className="pbadges"><span className="pb" style={{ background: 'rgba(148,163,184,0.15)', color: '#9fb0c8' }}>{known ? 'Literature value + model cross-check' : 'Trained descriptor, ranking only'}</span></div>
-      <div style={{ fontSize: 12.5, color: 'var(--ink3)', lineHeight: 1.6 }}>Trained on Catalysis-Hub O/OH/OOH energies (grouped CV R2 = {M.oer_cv_R2 ?? M.oer_R2}, conformal ±{pm} eV). The descriptor and ranking are robust; an absolute overpotential from the descriptor is only an estimate, so the literature value is shown where known. Only genuine OER catalysts are listed.</div>
+      <div className="pbadges">
+        {known
+          ? <span className="pb" style={{ background: 'rgba(148,163,184,0.15)', color: '#9fb0c8' }}>Literature value (representative) + model cross-check</span>
+          : <span className="pb" style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24' }}>Model-only estimate, lower confidence</span>}
+      </div>
+      <div style={{ fontSize: 12.5, color: 'var(--ink3)', lineHeight: 1.6 }}>Trained on Catalysis-Hub O/OH/OOH energies (grouped CV R2 = {M.oer_cv_R2 ?? M.oer_R2}). The descriptor band is wide (±{descPm} eV, propagated from the energy residuals), so use it for ranking, not absolute activity. Literature overpotentials are representative values, not individually cited. Only genuine OER catalysts are listed.</div>
     </>
   )
 }

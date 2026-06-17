@@ -177,7 +177,7 @@ function Hetero() {
         ))}
       </svg>
       <div className={'hverdict ' + (verdict.ok ? 'ok' : '')}>{verdict.text}</div>
-      <div className="hnote">{(ma?.edge_source === 'estimated' || mb?.edge_source === 'estimated') ? 'Caution: at least one band edge is estimated from electronegativity (Mulliken), so this verdict is low-confidence.' : 'Band edges from photocatalysis literature.'}</div>
+      <div className="hnote">{(ma?.edge_source === 'estimated' || mb?.edge_source === 'estimated') ? 'Caution: at least one band edge is estimated from electronegativity (Mulliken), so this verdict is low-confidence.' : 'Band edges are representative photocatalysis-literature values (not individually cited).'}</div>
     </div>
   )
 }

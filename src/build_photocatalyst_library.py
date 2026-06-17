@@ -133,7 +133,7 @@ def main():
         # gap precedence: reconcile > curated > measured(expt_gap) > literature
         if mat in RECONCILE:
             g, src = RECONCILE[mat], "reconciled"
-        elif ck.experimental_gap(mat) is not None:
+        elif ck.is_original_curated(mat):
             g, src = ck.experimental_gap(mat), "curated"
         else:
             k = reduced(mat)
